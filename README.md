@@ -1,7 +1,7 @@
 # HRM-Mobile-App
 
 ## Frontend Structure
-
+```
 lib/
 ├── app
 │  ├── app_shell.dart
@@ -53,17 +53,17 @@ lib/
 │        ├── shift_card.dart
 │        └── top_chrome.dart
 └── main.dart
-
+```
 
 ## Navigation flow:
-
+```
 main.dart
    ↓
 AppShell (Scaffold + BottomAppBar + FAB)
    ↓
 IndexedStack (Home / My Task / Payment / Profile)
 
-
+```
 ## Entry point:
 bash
 ```
