@@ -6,6 +6,7 @@ class HomeState extends Equatable {
   final String initials;
   final String name;
   final String role;
+  final bool isLoading;
 
   final DateTime today;
 
@@ -18,6 +19,7 @@ class HomeState extends Equatable {
     required this.name,
     required this.role,
     required this.today,
+    this.isLoading = false,
     this.checkedInAt,
     this.checkedOutAt,
   });
@@ -47,6 +49,7 @@ class HomeState extends Equatable {
     String? initials,
     String? name,
     String? role,
+    bool? isLoading,
     DateTime? today,
     DateTime? checkedInAt,
     DateTime? checkedOutAt,
@@ -58,6 +61,7 @@ class HomeState extends Equatable {
       today: today ?? this.today,
       checkedInAt: checkedInAt ?? this.checkedInAt,
       checkedOutAt: checkedOutAt ?? this.checkedOutAt,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 
@@ -71,6 +75,7 @@ class HomeState extends Equatable {
         today.day,
         checkedInAt?.millisecondsSinceEpoch,
         checkedOutAt?.millisecondsSinceEpoch,
+        isLoading,
       ];
 }
 

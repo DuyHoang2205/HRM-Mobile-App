@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'home_event.dart';
 import 'home_state.dart';
+import '../../../core/network/dio_client.dart';
+
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Timer? _midnightTimer;
@@ -17,10 +19,37 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // later: navigate to notifications
     });
 
-    // on<CheckInTapped>((event, emit) {
-    //   // simple local state update for check-in; backend integration later
-    //   emit(state.copyWith(checkInStatus: CheckInStatus.checkedIn));
-    // });
+// 1. Add the DioClient to your Bloc
+final DioClient _dioClient = DioClient(); 
+
+    // 2. Inside the constructor, update the handler:
+    on<CheckInTapped>((event, emit) async {
+      emit(state.copyWith(isLoading: true));
+      try {
+        // 1. Identify current status to know if we are checking IN or OUT
+        final bool isCurrentlyCheckedIn = state.isCheckedIn;
+
+        // 2. Call the API
+        await _dioClient.dio.post(
+          '/attendance/insert/MOBILE_APP', 
+          data: {
+            'employeeID': 101, // Use the ID we put in SQL
+            'location': 1,
+          },
+        );
+
+        // 3. Toggle the state: If was checked in, now check out (false).
+        add(CheckResultArrived(
+          timestamp: DateTime.now(),
+          isCheckIn: !isCurrentlyCheckedIn, 
+        ));
+        
+      } catch (e) {
+        print('Attendance API Error: $e');
+      } finally {
+        emit(state.copyWith(isLoading: false));
+      }
+    });
     
     on<CheckResultArrived>((event, emit) {
   if (event.isCheckIn) {
