@@ -67,6 +67,7 @@ class _HomeView extends StatelessWidget {
 
                     DemoAttendanceStore.add(
                       AttendanceLog(
+                        id: DateTime.now().millisecondsSinceEpoch,
                         timestamp: result.timestamp,
                         action: action,
                         userName: context.read<HomeBloc>().state.name,

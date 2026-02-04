@@ -53,18 +53,24 @@ class _CheckInView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<CheckInBloc, CheckInState>(
-      listenWhen: (p, c) => p.successMessage != c.successMessage && c.successMessage != null,
+      listenWhen: (p, c) {
+        if (c.successMessage != null && p.successMessage != c.successMessage) return true;
+        if (c.errorMessage != null && p.errorMessage != c.errorMessage) return true;
+        return false;
+      },
       listener: (context, state) async {
-        final msg = state.successMessage!;
-        await _showSuccessDialog(context, msg);
-
-        // return result back to Home
-        Navigator.of(context).pop(
-          CheckInResult(
-            action: state.isCheckoutMode ? CheckAction.checkOut : CheckAction.checkIn,
-            timestamp: state.actionTimestamp!,
-          ),
-        );
+        if (state.successMessage != null) {
+          await _showSuccessDialog(context, state.successMessage!);
+          Navigator.of(context).pop(
+            CheckInResult(
+              action: state.isCheckoutMode ? CheckAction.checkOut : CheckAction.checkIn,
+              timestamp: state.actionTimestamp!,
+            ),
+          );
+        }
+        if (state.errorMessage != null) {
+          await _showSuccessDialog(context, state.errorMessage!);
+        }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F7FB),

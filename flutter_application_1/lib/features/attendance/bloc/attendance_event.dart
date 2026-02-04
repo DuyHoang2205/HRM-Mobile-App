@@ -10,3 +10,7 @@ abstract class AttendanceEvent extends Equatable {
 class AttendanceStarted extends AttendanceEvent {
   const AttendanceStarted();
 }
+
+class AttendanceRefreshed extends AttendanceEvent {
+  const AttendanceRefreshed();
+}

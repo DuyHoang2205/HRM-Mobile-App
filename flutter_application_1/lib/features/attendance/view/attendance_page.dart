@@ -73,8 +73,7 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
                   ),
                 ),
               );
-              // after return, reload logs
-              if (mounted) context.read<AttendanceBloc>().add(const AttendanceStarted());
+              if (mounted) context.read<AttendanceBloc>().add(const AttendanceRefreshed());
             },
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B)),
           ),
@@ -101,11 +100,25 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tab,
-        children: const [
-          _TabLogs(),
-          _TabBangCong(),
+      body: Stack(
+        children: [
+          TabBarView(
+            controller: _tab,
+            children: const [
+              _TabLogs(),
+              _TabBangCong(),
+            ],
+          ),
+          BlocBuilder<AttendanceBloc, AttendanceState>(
+            buildWhen: (p, c) => p.isLoading != c.isLoading,
+            builder: (context, state) {
+              if (!state.isLoading) return const SizedBox.shrink();
+              return Container(
+                color: Colors.black26,
+                child: const Center(child: CircularProgressIndicator()),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -155,32 +168,70 @@ class _TabLogs extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
+        if (state.error != null && state.logs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    state.error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => context.read<AttendanceBloc>().add(const AttendanceRefreshed()),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         if (state.logs.isEmpty) {
-          return const Center(
-            child: Text(
-              'Chưa có dữ liệu chấm công',
-              style: TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: const Center(
+                  child: Text(
+                    'Chưa có dữ liệu chấm công',
+                    style: TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ),
           );
         }
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-          children: [
-            const Text(
-              'Hôm nay',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF9AA6B2),
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            children: [
+              const Text(
+                'Hôm nay',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF9AA6B2),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            for (final log in state.logs) ...[
-              _LogItem(log: log),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
+              for (final log in state.logs) ...[
+                _LogItem(log: log),
+                const SizedBox(height: 14),
+              ],
             ],
-          ],
+          ),
         );
       },
     );

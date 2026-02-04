@@ -65,9 +65,11 @@ Widget build(BuildContext context) {
                             ),
                           );
 
-                          // 2. Only if the user confirmed (result is CheckInResult), then trigger the Bloc
                           if (result is CheckInResult) {
-                            context.read<HomeBloc>().add(const CheckInTapped());
+                            context.read<HomeBloc>().add(CheckResultArrived(
+                              timestamp: result.timestamp,
+                              isCheckIn: result.action == CheckAction.checkIn,
+                            ));
                           }
                         },
                       ),
