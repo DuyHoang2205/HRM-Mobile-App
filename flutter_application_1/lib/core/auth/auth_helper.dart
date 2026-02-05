@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 /// Keys for stored auth data.
 const String _kAccessToken = 'access_token';
@@ -30,7 +32,63 @@ Map<String, dynamic>? decodeJwtPayload(String token) {
   }
 }
 
+// real implementation
+//   class AuthHelper {
+//   /// Saves access token and, if present, employeeId and site from JWT payload.
+//   static Future<void> saveTokenAndUser(String accessToken) async {
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.setString(_kAccessToken, accessToken);
+//     final payload = decodeJwtPayload(accessToken);
+//     if (payload != null) {
+//       final employeeId = payload['employeeId'];
+//       if (employeeId != null) {
+//         await prefs.setInt(_kEmployeeId, employeeId is int ? employeeId : int.tryParse(employeeId.toString()) ?? 0);
+//       }
+//       final site = payload['site'];
+//       if (site != null) {
+//         await prefs.setString(_kSiteId, site.toString());
+//       }
+//     }
+//   }
+
+//   /// Returns stored employee ID, or null if not set.
+//   static Future<int?> getEmployeeId() async {
+//     final prefs = await SharedPreferences.getInstance();
+//     return prefs.getInt(_kEmployeeId);
+//   }
+
+//   /// Returns stored site ID for API (e.g. byEmployee/:siteID). Defaults to 'MOBILE_APP'.
+//   static Future<String> getSiteId() async {
+//     final prefs = await SharedPreferences.getInstance();
+//     return prefs.getString(_kSiteId) ?? 'MOBILE_APP';
+//   }
+
+//   static Future<void> clear() async {
+//     final prefs = await SharedPreferences.getInstance();
+//     await prefs.remove(_kAccessToken);
+//     await prefs.remove(_kEmployeeId);
+//     await prefs.remove(_kSiteId);
+//   }
+// }
+
 class AuthHelper {
+  /// AUTHENTICATES SILENTLY WITH HARDCODED TOKEN
+  static Future<void> silentLogin() async {
+
+    if (kDebugMode) {
+      print('------- USING HARDCODED TOKEN BYPASS -------');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kAccessToken, hardToken);
+    
+    // Hardcode User Context since token doesn't have it
+    await prefs.setInt(_kEmployeeId, 101);
+    await prefs.setString(_kSiteId, 'REEME');
+    
+    print('------- SILENT LOGIN SUCCESS (Hardcoded) -------');
+  }
+
   /// Saves access token and, if present, employeeId and site from JWT payload.
   static Future<void> saveTokenAndUser(String accessToken) async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,7 +97,9 @@ class AuthHelper {
     if (payload != null) {
       final employeeId = payload['employeeId'];
       if (employeeId != null) {
-        await prefs.setInt(_kEmployeeId, employeeId is int ? employeeId : int.tryParse(employeeId.toString()) ?? 0);
+        // Handle both string and int cases safely
+        final id = employeeId is int ? employeeId : int.tryParse(employeeId.toString()) ?? 0;
+        await prefs.setInt(_kEmployeeId, id);
       }
       final site = payload['site'];
       if (site != null) {
@@ -59,11 +119,14 @@ class AuthHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_kSiteId) ?? 'MOBILE_APP';
   }
+  
+  static Future<String?> getAccessToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kAccessToken);
+  }
 
   static Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_kAccessToken);
-    await prefs.remove(_kEmployeeId);
-    await prefs.remove(_kSiteId);
+    await prefs.clear(); // Clears everything including token
   }
 }

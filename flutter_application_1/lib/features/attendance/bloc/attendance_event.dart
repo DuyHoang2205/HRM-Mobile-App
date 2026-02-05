@@ -14,3 +14,11 @@ class AttendanceStarted extends AttendanceEvent {
 class AttendanceRefreshed extends AttendanceEvent {
   const AttendanceRefreshed();
 }
+
+class AttendanceFilterChanged extends AttendanceEvent {
+  final DateTime date;
+  const AttendanceFilterChanged(this.date);
+
+  @override
+  List<Object?> get props => [date];
+}

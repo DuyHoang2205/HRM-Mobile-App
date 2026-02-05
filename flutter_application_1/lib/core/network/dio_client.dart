@@ -5,7 +5,7 @@ class DioClient {
   late final Dio dio;
 
   DioClient() {
-    dio = Dio(BaseOptions(baseUrl: 'http://localhost:3003/api'));
+    dio = Dio(BaseOptions(baseUrl: 'http://localhost:3003/api/'));
 
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
