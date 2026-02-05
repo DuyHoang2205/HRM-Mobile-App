@@ -10,7 +10,10 @@ class ConfirmButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CheckInBloc, CheckInState>(
-      buildWhen: (p, c) => p.isConfirming != c.isConfirming,
+      buildWhen: (p, c) => 
+        p.isConfirming != c.isConfirming || 
+        p.isValidLocation != c.isValidLocation || 
+        p.isValidWifi != c.isValidWifi,
       builder: (_, state) {
         return SizedBox(
           height: 56,
@@ -24,7 +27,7 @@ class ConfirmButton extends StatelessWidget {
               ),
               elevation: 0,
             ),
-            onPressed: state.isConfirming
+            onPressed: (state.isConfirming || !state.isValidLocation || !state.isValidWifi)
                 ? null
                 : () => context.read<CheckInBloc>().add(const ConfirmPressed()),
             child: state.isConfirming

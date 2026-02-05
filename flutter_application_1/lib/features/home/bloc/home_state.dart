@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../attendance/models/attendance_log.dart';
 
 enum CheckInStatus { notCheckedIn, checkedIn }
 
@@ -13,6 +14,7 @@ class HomeState extends Equatable {
   // Store session
   final DateTime? checkedInAt;
   final DateTime? checkedOutAt;
+  final List<AttendanceLog> attendanceLogs;
 
   const HomeState({
     required this.initials,
@@ -22,6 +24,7 @@ class HomeState extends Equatable {
     this.isLoading = false,
     this.checkedInAt,
     this.checkedOutAt,
+    this.attendanceLogs = const [],
   });
 
   factory HomeState.initial() => HomeState(
@@ -53,6 +56,7 @@ class HomeState extends Equatable {
     DateTime? today,
     DateTime? checkedInAt,
     DateTime? checkedOutAt,
+    List<AttendanceLog>? attendanceLogs,
   }) {
     return HomeState(
       initials: initials ?? this.initials,
@@ -62,6 +66,7 @@ class HomeState extends Equatable {
       checkedInAt: checkedInAt ?? this.checkedInAt,
       checkedOutAt: checkedOutAt ?? this.checkedOutAt,
       isLoading: isLoading ?? this.isLoading,
+      attendanceLogs: attendanceLogs ?? this.attendanceLogs,
     );
   }
 
@@ -76,6 +81,7 @@ class HomeState extends Equatable {
         checkedInAt?.millisecondsSinceEpoch,
         checkedOutAt?.millisecondsSinceEpoch,
         isLoading,
+        attendanceLogs,
       ];
 }
 

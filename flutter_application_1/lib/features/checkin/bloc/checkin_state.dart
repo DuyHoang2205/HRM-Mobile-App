@@ -33,7 +33,14 @@ class CheckInState extends Equatable {
   final bool isRefreshingLocation;
   final bool isConfirming;
 
-  // Success / error from API
+  final bool isValidLocation;
+  final bool isValidWifi;
+  final int? locationId;
+  final String locationName;
+  final double? currentLatitude;
+  final double? currentLongitude;
+
+  // NEW: success flow
   final String? successMessage;
   final String? errorMessage;
   final DateTime? actionTimestamp;
@@ -50,6 +57,12 @@ class CheckInState extends Equatable {
     required this.selectedShiftId,
     required this.isRefreshingLocation,
     required this.isConfirming,
+    required this.isValidLocation,
+    required this.isValidWifi,
+    required this.locationId,
+    required this.locationName,
+    required this.currentLatitude,
+    required this.currentLongitude,
     required this.successMessage,
     required this.errorMessage,
     required this.actionTimestamp,
@@ -85,6 +98,12 @@ class CheckInState extends Equatable {
       selectedShiftId: 'personal',
       isRefreshingLocation: false,
       isConfirming: false,
+      isValidLocation: false,
+      isValidWifi: false,
+      locationId: null,
+      locationName: 'Unknown',
+      currentLatitude: null,
+      currentLongitude: null,
       successMessage: null,
       errorMessage: null,
       actionTimestamp: null,
@@ -103,6 +122,12 @@ class CheckInState extends Equatable {
     String? selectedShiftId,
     bool? isRefreshingLocation,
     bool? isConfirming,
+    bool? isValidLocation,
+    bool? isValidWifi,
+    int? locationId,
+    String? locationName,
+    double? currentLatitude,
+    double? currentLongitude,
     String? successMessage,
     String? errorMessage,
     DateTime? actionTimestamp,
@@ -119,6 +144,12 @@ class CheckInState extends Equatable {
       selectedShiftId: selectedShiftId ?? this.selectedShiftId,
       isRefreshingLocation: isRefreshingLocation ?? this.isRefreshingLocation,
       isConfirming: isConfirming ?? this.isConfirming,
+      isValidLocation: isValidLocation ?? this.isValidLocation,
+      isValidWifi: isValidWifi ?? this.isValidWifi,
+      locationId: locationId ?? this.locationId,
+      locationName: locationName ?? this.locationName,
+      currentLatitude: currentLatitude ?? this.currentLatitude,
+      currentLongitude: currentLongitude ?? this.currentLongitude,
       successMessage: successMessage,
       errorMessage: errorMessage,
       actionTimestamp: actionTimestamp ?? this.actionTimestamp,
@@ -138,6 +169,12 @@ class CheckInState extends Equatable {
         selectedShiftId,
         isRefreshingLocation,
         isConfirming,
+        isValidLocation,
+        isValidWifi,
+        locationId,
+        locationName,
+        currentLatitude,
+        currentLongitude,
         successMessage,
         errorMessage,
         actionTimestamp?.millisecondsSinceEpoch,

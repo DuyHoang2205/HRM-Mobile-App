@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../attendance/models/attendance_log.dart';
 
 abstract class HomeEvent extends Equatable {
   const HomeEvent();
@@ -30,4 +31,13 @@ class CheckResultArrived extends HomeEvent {
 
   @override
   List<Object?> get props => [timestamp, isCheckIn];
+}
+
+class AttendanceLogsLoaded extends HomeEvent {
+  final List<AttendanceLog> logs;
+
+  const AttendanceLogsLoaded(this.logs);
+
+  @override
+  List<Object?> get props => [logs];
 }

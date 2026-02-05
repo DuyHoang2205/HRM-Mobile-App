@@ -1,12 +1,35 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_state.dart';
 
-class ShiftCard extends StatelessWidget {
+class ShiftCard extends StatefulWidget {
   final VoidCallback onTap;
 
   const ShiftCard({super.key, required this.onTap});
+
+  @override
+  State<ShiftCard> createState() => _ShiftCardState();
+}
+
+class _ShiftCardState extends State<ShiftCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh UI every 10 seconds to keep the time updated (when not checked in)
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +49,7 @@ class ShiftCard extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(22),
-              onTap: onTap,
+              onTap: widget.onTap,
               child: Ink(
                 height: 120,
                 padding: const EdgeInsets.all(18),

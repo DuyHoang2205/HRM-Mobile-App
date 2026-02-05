@@ -9,8 +9,7 @@ class WifiInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CheckInBloc, CheckInState>(
-      buildWhen: (p, c) =>
-          p.wifiName != c.wifiName || p.bssid != c.bssid || p.wifiLabelRight != c.wifiLabelRight,
+      buildWhen: (p, c) => p.isValidLocation != c.isValidLocation || p.locationName != c.locationName,
       builder: (_, state) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -25,38 +24,37 @@ class WifiInfoCard extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
+            child: Row(
             children: [
-              const Icon(Icons.wifi, color: Color(0xFF9AA6B2)),
+              Icon(
+                Icons.wifi,
+                color: const Color(0xFF00C389),
+              ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Kết nối: ${state.wifiName}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0B1B2B),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Kết nối: Có kết nối WIFI',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0B1B2B),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    state.wifiLabelRight,
-                    style: const TextStyle(
+                    state.isValidLocation ? (state.locationName) : 'Ngoài vùng',
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF0B1B2B),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '(bssid: ${state.bssid})',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF9AA6B2),
-                      fontWeight: FontWeight.w500,
+                      color: state.isValidLocation ? const Color(0xFF0B1B2B) : const Color(0xFFFF3B30),
                     ),
                   ),
                 ],

@@ -34,7 +34,9 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final siteID = await AuthHelper.getSiteId();
       final date = state.filterDate;
       final fromDate = DateTime(date.year, date.month, 1);
-      final toDate = DateTime(date.year, date.month + 1, 0);
+      // Use first day of NEXT month to ensure we cover the entire current month (including the last day)
+      // because backend likely compares <= date (midnight) or similar.
+      final toDate = DateTime(date.year, date.month + 1, 1);
       final response = await _dioClient.dio.post(
         'attendance/byEmployee/$siteID',
         data: {

@@ -44,8 +44,7 @@ class ScheduleSection extends StatelessWidget {
           // Title row
           Row(
             children: const [
-              Expanded(child: Text('Lịch làm việc', style: titleStyle,)),
-              Icon(Icons.chevron_right, size: 28, color: Color(0xFF9AA6B2)),
+              Text('Lịch làm việc', style: titleStyle,),
             ],
           ),
           const SizedBox(height: 14),
@@ -54,7 +53,8 @@ class ScheduleSection extends StatelessWidget {
             buildWhen: (p, c) =>
                 p.today.year != c.today.year ||
                 p.today.month != c.today.month ||
-                p.today.day != c.today.day,
+                p.today.day != c.today.day ||
+                p.attendanceLogs != c.attendanceLogs,
             builder: (context, state) {
               final today = DateTime(
                 state.today.year,
@@ -64,6 +64,15 @@ class ScheduleSection extends StatelessWidget {
 
               final start = today.subtract(const Duration(days: 3));
 
+              // Create a set of dates that have attendance for quick lookup
+              final datesWithAttendance = <String>{};
+              for (final log in state.attendanceLogs) {
+                final dateKey = '${log.timestamp.year}-${log.timestamp.month}-${log.timestamp.day}';
+                datesWithAttendance.add(dateKey);
+              }
+
+              print('DEBUG Schedule: ${state.attendanceLogs.length} logs, ${datesWithAttendance.length} unique dates');
+              print('DEBUG Schedule: Dates with attendance: $datesWithAttendance');
 
               return LayoutBuilder(
                 builder: (context, constraints) {
@@ -83,6 +92,12 @@ class ScheduleSection extends StatelessWidget {
                         final day = date.day.toString();
 
                         final isToday = i == 3;
+                        
+                        // Check if this date has attendance
+                        final dateKey = '${date.year}-${date.month}-${date.day}';
+                        final hasAttendance = datesWithAttendance.contains(dateKey);
+                        
+                        print('DEBUG Chip $i: $dateKey, hasAttendance: $hasAttendance');
 
                         return Padding(
                           padding: EdgeInsets.only(right: i == 6 ? 0 : gap),
@@ -91,7 +106,8 @@ class ScheduleSection extends StatelessWidget {
                             height: chipH,
                             dow: dow,
                             day: day,
-                            highlight: isToday, 
+                            highlight: isToday,
+                            hasAttendance: hasAttendance,
                           ),
                         );
                       }),
@@ -113,6 +129,7 @@ class _StaticDateChip extends StatelessWidget {
   final String dow;
   final String day;
   final bool highlight;
+  final bool hasAttendance;
 
   const _StaticDateChip({
     required this.width,
@@ -120,6 +137,7 @@ class _StaticDateChip extends StatelessWidget {
     required this.dow,
     required this.day,
     required this.highlight,
+    this.hasAttendance = false,
   });
 
   @override
@@ -170,14 +188,16 @@ class _StaticDateChip extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(
-              color: dotColor,
-              shape: BoxShape.circle,
+          // Only show dot if there's attendance data for this day
+          if (hasAttendance)
+            Container(
+              width: 5,
+              height: 5,
+              decoration: BoxDecoration(
+                color: dotColor,
+                shape: BoxShape.circle,
+              ),
             ),
-          ),
         ],
       ),
     );

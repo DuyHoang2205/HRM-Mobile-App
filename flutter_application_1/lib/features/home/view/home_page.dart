@@ -8,28 +8,102 @@ import '../widgets/schedule_section.dart';
 import '../widgets/shift_card.dart';
 import '../../checkin/view/checkin_page.dart';
 import '../../checkin/models/checkin_result.dart';
-import '../../../core/demo/demo_attendance_store.dart';
 import '../../attendance/models/attendance_log.dart';
 import '../widgets/folder_section.dart';
 import '../models/folder_item.dart';
-
 import '../../attendance/view/attendance_page.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/auth/auth_helper.dart';
 
 
-class HomePage extends StatelessWidget {
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final DioClient _dioClient = DioClient();
+
+  Future<void> _fetchAttendanceLogs(BuildContext context) async {
+    try {
+      final employeeId = await AuthHelper.getEmployeeId();
+      if (employeeId == null) {
+        print('DEBUG: No employeeId, skipping attendance fetch');
+        return;
+      }
+
+      final siteID = await AuthHelper.getSiteId();
+      final now = DateTime.now();
+      final fromDate = now.subtract(const Duration(days: 30)); // Last 30 days
+      // Add 1 day to include today's records if backend uses <= date (midnight)
+      final toDate = now.add(const Duration(days: 1));
+
+      print('DEBUG: Fetching attendance from ${_formatDate(fromDate)} to ${_formatDate(toDate)}');
+      
+      final requestData = {
+        'employeeId': employeeId,
+        'fromDate': _formatDate(fromDate),
+        'toDate': _formatDate(toDate),
+      };
+      
+      print('DEBUG: API endpoint: attendance/byEmployee/$siteID');
+      print('DEBUG: Request data: $requestData');
+
+      final response = await _dioClient.dio.post(
+        'attendance/byEmployee/$siteID',
+        data: requestData,
+      );
+
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response data type: ${response.data.runtimeType}');
+      print('DEBUG: Response data: ${response.data}');
+
+      final List<dynamic> raw = response.data is List ? response.data as List : const [];
+      final logs = raw.map((e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+
+      print('DEBUG: Fetched ${logs.length} attendance logs');
+      for (final log in logs.take(5)) {
+        print('DEBUG: Log date: ${log.timestamp.year}-${log.timestamp.month}-${log.timestamp.day}');
+      }
+
+      if (context.mounted) {
+        context.read<HomeBloc>().add(AttendanceLogsLoaded(logs));
+        print('DEBUG: Sent ${logs.length} logs to HomeBloc');
+      }
+    } catch (e) {
+      print('DEBUG: Error fetching attendance: $e');
+      // Silently fail - dots just won't show
+    }
+  }
+
+  String _formatDate(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) => HomeBloc()..add(const HomeStarted()),
-      child: const _HomeView(),
+      child: Builder(
+        builder: (context) {
+          // Fetch attendance logs after BlocProvider is ready
+          Future.microtask(() => _fetchAttendanceLogs(context));
+          return _HomeView(
+            onRefresh: () => _fetchAttendanceLogs(context),
+          );
+        },
+      ),
     );
   }
 }
 
 class _HomeView extends StatelessWidget {
-  const _HomeView();
+  final VoidCallback? onRefresh;
+  const _HomeView({this.onRefresh});
 
 @override
 Widget build(BuildContext context) {
@@ -76,12 +150,21 @@ Widget build(BuildContext context) {
                       const SizedBox(height: 18),
                       FolderSection(
                         onTap: (action) async {
+                          print('DEBUG: Folder tapped: $action');
                           switch (action) {
                           case FolderAction.attendance:
+                                  print('DEBUG: Navigating to AttendancePage...');
                                   // Points to the history list of "Vào ca / Ra ca" entries
                                   Navigator.of(context).push(
                                     MaterialPageRoute(builder: (_) => const AttendancePage()),
-                                  );
+                                  ).then((_) {
+                                    // Refresh logic when returning from Attendance Page
+                                    print('DEBUG: Returned from AttendancePage, refreshing logs...');
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Updating Home...'), duration: Duration(milliseconds: 500)),
+                                    );
+                                    onRefresh?.call();
+                                  });
                           break;
 
                             // case FolderAction.timesheet: // This is 'Bảng công'

@@ -296,7 +296,8 @@ class _LogItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIn = log.action == AttendanceAction.checkIn;
-    final iconBg = isIn ? const Color(0xFFE53935) : const Color(0xFF4F8DFD);
+    // User requested: Vào ca (In) = Blue, Ra ca (Out) = Red
+    final iconBg = isIn ? const Color(0xFF4F8DFD) : const Color(0xFFE53935);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -430,24 +431,14 @@ class _BangCongTile extends StatelessWidget {
                 color: Color(0xFF5D6B78),
               ),
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  row.value,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color: row.valueColor ?? const Color(0xFF0B1B2B),
-                  ),
-                ),
-                if (row.chevron) ...[
-                  const SizedBox(width: 10),
-                  const Icon(Icons.chevron_right_rounded, color: Color(0xFFB7C0C9)),
-                ],
-              ],
+            trailing: Text(
+              row.value,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: row.valueColor ?? const Color(0xFF0B1B2B),
+              ),
             ),
-            onTap: row.chevron ? () {} : null,
           ),
           const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
         ],
