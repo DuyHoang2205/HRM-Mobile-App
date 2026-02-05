@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/network/dio_client.dart'; // Import your dio_client.dart
+import '../../../core/auth/auth_helper.dart';
+import '../../../core/network/dio_client.dart';
 import 'login_event.dart';
 import 'login_state.dart';
 
@@ -27,9 +27,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       // NestJS returns the token in this field
       final String token = response.data['accessToken'];
 
-      // Save token locally for the Dio Interceptor
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('access_token', token);
+      // Save token and decode employeeId/site from JWT for attendance APIs
+      await AuthHelper.saveTokenAndUser(token);
 
       emit(const LoginState(status: LoginStatus.success));
     } catch (e) {

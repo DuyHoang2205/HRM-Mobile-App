@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'app/app_shell.dart'; 
 // import 'features/home/view/home_page.dart';
+import 'core/auth/auth_helper.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthHelper.silentLogin();
   runApp(const MyApp());
 }
 

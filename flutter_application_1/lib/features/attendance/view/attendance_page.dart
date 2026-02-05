@@ -64,17 +64,24 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
           ),
           IconButton(
             onPressed: () async {
-              // ✅ "+" directs to Vào ca (CheckInPage in check-in mode)
+              // ✅ Check In/Out based on current state
+              final currentState = context.read<AttendanceBloc>().state;
+              final isCheckedIn = currentState.isCheckedIn;
+              
+              // If checking out, pass the last check-in time if available (approximate)
+              final lastCheckInTime = isCheckedIn && currentState.logs.isNotEmpty 
+                  ? currentState.logs.first.timestamp // logs are reversed, so first is latest
+                  : null;
+
               await Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const CheckInPage(
-                    isCheckoutMode: false,
-                    checkedInAt: null,
+                  builder: (_) => CheckInPage(
+                    isCheckoutMode: isCheckedIn, // If checked in, mode is Checkout
+                    checkedInAt: lastCheckInTime,
                   ),
                 ),
               );
-              // after return, reload logs
-              if (mounted) context.read<AttendanceBloc>().add(const AttendanceStarted());
+              if (mounted) context.read<AttendanceBloc>().add(const AttendanceRefreshed());
             },
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B)),
           ),
@@ -101,11 +108,25 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tab,
-        children: const [
-          _TabLogs(),
-          _TabBangCong(),
+      body: Stack(
+        children: [
+          TabBarView(
+            controller: _tab,
+            children: const [
+              _TabLogs(),
+              _TabBangCong(),
+            ],
+          ),
+          BlocBuilder<AttendanceBloc, AttendanceState>(
+            buildWhen: (p, c) => p.isLoading != c.isLoading,
+            builder: (context, state) {
+              if (!state.isLoading) return const SizedBox.shrink();
+              return Container(
+                color: Colors.black26,
+                child: const Center(child: CircularProgressIndicator()),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -117,10 +138,10 @@ class _AttendanceTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Chấm công',
           style: TextStyle(
             fontSize: 22,
@@ -128,23 +149,66 @@ class _AttendanceTitle extends StatelessWidget {
             color: Color(0xFF0B1B2B),
           ),
         ),
-        SizedBox(height: 2),
-        Row(
-          children: [
-            Text(
-              '01.01 - 31.01',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF9AA6B2),
+        const SizedBox(height: 2),
+        BlocBuilder<AttendanceBloc, AttendanceState>(
+          buildWhen: (p, c) => p.filterDate != c.filterDate,
+          builder: (context, state) {
+            final date = state.filterDate;
+            final firstDay = DateTime(date.year, date.month, 1);
+            final lastDay = DateTime(date.year, date.month + 1, 0);
+            
+            final text = '${_fmtDayMonth(firstDay)} - ${_fmtDayMonth(lastDay)}';
+
+            return GestureDetector(
+              onTap: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: state.filterDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                  locale: const Locale('vi', 'VN'), // Optional: if app supports localization
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: const ColorScheme.light(
+                           primary: Color(0xFF00C389),
+                           onPrimary: Colors.white,
+                           onSurface: Color(0xFF0B1B2B),
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
+                );
+                
+                if (picked != null) {
+                  context.read<AttendanceBloc>().add(AttendanceFilterChanged(picked));
+                }
+              },
+              child: Row(
+                children: [
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF9AA6B2),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9AA6B2)),
+                ],
               ),
-            ),
-            SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9AA6B2)),
-          ],
+            );
+          },
         ),
       ],
     );
+  }
+
+  String _fmtDayMonth(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(d.day)}.${two(d.month)}';
   }
 }
 
@@ -155,32 +219,70 @@ class _TabLogs extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
+        if (state.error != null && state.logs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    state.error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => context.read<AttendanceBloc>().add(const AttendanceRefreshed()),
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         if (state.logs.isEmpty) {
-          return const Center(
-            child: Text(
-              'Chưa có dữ liệu chấm công',
-              style: TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.5,
+                child: const Center(
+                  child: Text(
+                    'Chưa có dữ liệu chấm công',
+                    style: TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
             ),
           );
         }
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-          children: [
-            const Text(
-              'Hôm nay',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF9AA6B2),
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+          },
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+            children: [
+              const Text(
+                'Hôm nay',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF9AA6B2),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            for (final log in state.logs) ...[
-              _LogItem(log: log),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
+              for (final log in state.logs) ...[
+                _LogItem(log: log),
+                const SizedBox(height: 14),
+              ],
             ],
-          ],
+          ),
         );
       },
     );

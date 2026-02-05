@@ -33,8 +33,9 @@ class CheckInState extends Equatable {
   final bool isRefreshingLocation;
   final bool isConfirming;
 
-  // NEW: success flow
+  // Success / error from API
   final String? successMessage;
+  final String? errorMessage;
   final DateTime? actionTimestamp;
 
   const CheckInState({
@@ -50,6 +51,7 @@ class CheckInState extends Equatable {
     required this.isRefreshingLocation,
     required this.isConfirming,
     required this.successMessage,
+    required this.errorMessage,
     required this.actionTimestamp,
   });
 
@@ -84,6 +86,7 @@ class CheckInState extends Equatable {
       isRefreshingLocation: false,
       isConfirming: false,
       successMessage: null,
+      errorMessage: null,
       actionTimestamp: null,
     );
   }
@@ -101,6 +104,7 @@ class CheckInState extends Equatable {
     bool? isRefreshingLocation,
     bool? isConfirming,
     String? successMessage,
+    String? errorMessage,
     DateTime? actionTimestamp,
   }) {
     return CheckInState(
@@ -116,6 +120,7 @@ class CheckInState extends Equatable {
       isRefreshingLocation: isRefreshingLocation ?? this.isRefreshingLocation,
       isConfirming: isConfirming ?? this.isConfirming,
       successMessage: successMessage,
+      errorMessage: errorMessage,
       actionTimestamp: actionTimestamp ?? this.actionTimestamp,
     );
   }
@@ -134,6 +139,7 @@ class CheckInState extends Equatable {
         isRefreshingLocation,
         isConfirming,
         successMessage,
+        errorMessage,
         actionTimestamp?.millisecondsSinceEpoch,
       ];
 }
