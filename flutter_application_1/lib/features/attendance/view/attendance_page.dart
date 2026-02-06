@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../checkin/view/checkin_page.dart';
+import '../../checkin/models/checkin_result.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
@@ -27,6 +28,7 @@ class _AttendanceView extends StatefulWidget {
 
 class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProviderStateMixin {
   late final TabController _tab;
+  CheckInResult? _lastResult; // Trace the last action to sync with Home
 
   @override
   void initState() {
@@ -51,7 +53,7 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).pop(_lastResult), // Return result to Home
         ),
         titleSpacing: 0,
         title: const _AttendanceTitle(),
@@ -64,16 +66,17 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
           ),
           IconButton(
             onPressed: () async {
-              // ✅ Check In/Out based on current state
+              // Check In/Out based on current state
               final currentState = context.read<AttendanceBloc>().state;
               final isCheckedIn = currentState.isCheckedIn;
+              print('DEBUG UI BREAKPOINT: Button Pressed. State isCheckedIn: $isCheckedIn');
               
               // If checking out, pass the last check-in time if available (approximate)
               final lastCheckInTime = isCheckedIn && currentState.logs.isNotEmpty 
                   ? currentState.logs.first.timestamp // logs are reversed, so first is latest
                   : null;
 
-              await Navigator.of(context).push(
+              final result = await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CheckInPage(
                     isCheckoutMode: isCheckedIn, // If checked in, mode is Checkout
@@ -81,7 +84,16 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
                   ),
                 ),
               );
-              if (mounted) context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+              
+              if (mounted && result is CheckInResult) {
+                 _lastResult = result; // Save for return to Home
+                 context.read<AttendanceBloc>().add(AttendanceCheckResultArrived(
+                   isCheckIn: result.action == CheckAction.checkIn,
+                   timestamp: result.timestamp,
+                 ));
+              } else if (mounted) {
+                 context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+              }
             },
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B)),
           ),

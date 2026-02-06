@@ -50,14 +50,19 @@ class AttendanceLog {
                  final h = int.parse(parts[0]);
                  final m = int.parse(parts[1]);
                  final s = parts.length > 2 ? int.tryParse(parts[2].split('.')[0]) ?? 0 : 0;
-                 timestamp = DateTime.utc(
+                 
+                 // ASSUMPTION: Backend returns Local Time (not UTC)
+                 // If we use DateTime.utc().toLocal(), we double-add offset if input is already local.
+                 // Using DateTime(...) constructs in Local system time.
+                 timestamp = DateTime(
                    timestamp.year, timestamp.month, timestamp.day,
                    h, m, s
-                 ).toLocal();
+                 );
+                 print('DEBUG: Parsed Timestamp: $timestamp from $authDateStr + $authTimeStr');
                }
              }
-          } catch (_) {
-            // fallback, keep datePart
+          } catch (e) {
+             print('DEBUG: Error parsing time: $e');
           }
         }
       }

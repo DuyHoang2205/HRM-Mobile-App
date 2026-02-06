@@ -19,6 +19,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     LocationRepository? locationRepository,
   })  : _locationRepository = locationRepository ?? LocationRepository(),
         super(CheckInState.initial(isCheckoutMode: isCheckoutMode, checkedInAt: checkedInAt)) {
+    print('DEBUG CheckInBloc: Init with isCheckoutMode=$isCheckoutMode');
     on<CheckInStarted>(_onStarted);
 
     on<ShiftSelected>((event, emit) {
@@ -83,7 +84,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
   }
 
   Future<void> _validateLocation(Emitter<CheckInState> emit) async {
-    print('Starting Validation...');
+    print('Starting Validation... State isCheckoutMode=${state.isCheckoutMode}');
     // 1. Permissions (Using Geolocator directly)
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {

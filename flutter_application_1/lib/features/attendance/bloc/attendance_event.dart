@@ -22,3 +22,12 @@ class AttendanceFilterChanged extends AttendanceEvent {
   @override
   List<Object?> get props => [date];
 }
+
+class AttendanceCheckResultArrived extends AttendanceEvent {
+  final bool isCheckIn;
+  final DateTime timestamp; // Optional, if we want to add a temporary log
+  const AttendanceCheckResultArrived({required this.isCheckIn, required this.timestamp});
+
+  @override
+  List<Object?> get props => [isCheckIn, timestamp];
+}

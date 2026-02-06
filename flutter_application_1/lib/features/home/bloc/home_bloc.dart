@@ -58,6 +58,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           log.timestamp.day == today.day
         ).toList();
 
+        print('DEBUG: HomeBloc Today: $today');
+        print('DEBUG: Total Logs: ${event.logs.length}');
+        print('DEBUG: Today Logs Count: ${todayLogs.length}');
+        if (todayLogs.isNotEmpty) {
+           print('DEBUG: Latest Log: ${todayLogs.first.timestamp} - Action: ${todayLogs.length % 2 != 0 ? "IN" : "OUT"}');
+        }
+
         if (todayLogs.isNotEmpty) {
           // If count is ODD -> We are currently Checked IN (1st=In, 2nd=Out, 3rd=In...)
           // If count is EVEN -> We are currently Checked OUT
