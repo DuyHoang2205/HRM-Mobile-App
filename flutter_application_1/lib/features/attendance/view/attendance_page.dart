@@ -28,14 +28,13 @@ class _AttendanceView extends StatefulWidget {
 
 class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProviderStateMixin {
   late final TabController _tab;
-  CheckInResult? _lastResult; // Trace the last action to sync with Home
+  CheckInResult? _lastResult; 
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
-    // In your screenshot, "Bảng công" is selected.
-    _tab.index = 1;
+    _tab.index = 0; 
   }
 
   @override
@@ -53,40 +52,37 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
-          onPressed: () => Navigator.of(context).pop(_lastResult), // Return result to Home
+          onPressed: () {
+            // CRITICAL FIX: Pass the result back to HomePage
+            Navigator.of(context).pop(_lastResult);
+          },
         ),
         titleSpacing: 0,
         title: const _AttendanceTitle(),
         actions: [
           IconButton(
-            onPressed: () {
-              // placeholder filter
-            },
+            onPressed: () {}, 
             icon: const Icon(Icons.tune_rounded, color: Color(0xFF0B1B2B)),
           ),
           IconButton(
             onPressed: () async {
-              // Check In/Out based on current state
               final currentState = context.read<AttendanceBloc>().state;
-              final isCheckedIn = currentState.isCheckedIn;
-              print('DEBUG UI BREAKPOINT: Button Pressed. State isCheckedIn: $isCheckedIn');
-              
-              // If checking out, pass the last check-in time if available (approximate)
-              final lastCheckInTime = isCheckedIn && currentState.logs.isNotEmpty 
-                  ? currentState.logs.first.timestamp // logs are reversed, so first is latest
-                  : null;
+              final bool isCheckedIn = currentState.logs.isNotEmpty && 
+                                       currentState.logs.first.action == AttendanceAction.checkIn;
+
+              final lastCheckInTime = isCheckedIn ? currentState.logs.first.timestamp : null;
 
               final result = await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CheckInPage(
-                    isCheckoutMode: isCheckedIn, // If checked in, mode is Checkout
+                    isCheckoutMode: isCheckedIn, 
                     checkedInAt: lastCheckInTime,
                   ),
                 ),
               );
               
               if (mounted && result is CheckInResult) {
-                 _lastResult = result; // Save for return to Home
+                 _lastResult = result; 
                  context.read<AttendanceBloc>().add(AttendanceCheckResultArrived(
                    isCheckIn: result.action == CheckAction.checkIn,
                    timestamp: result.timestamp,
@@ -155,11 +151,7 @@ class _AttendanceTitle extends StatelessWidget {
       children: [
         const Text(
           'Chấm công',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF0B1B2B),
-          ),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0B1B2B)),
         ),
         const SizedBox(height: 2),
         BlocBuilder<AttendanceBloc, AttendanceState>(
@@ -168,7 +160,6 @@ class _AttendanceTitle extends StatelessWidget {
             final date = state.filterDate;
             final firstDay = DateTime(date.year, date.month, 1);
             final lastDay = DateTime(date.year, date.month + 1, 0);
-            
             final text = '${_fmtDayMonth(firstDay)} - ${_fmtDayMonth(lastDay)}';
 
             return GestureDetector(
@@ -178,35 +169,15 @@ class _AttendanceTitle extends StatelessWidget {
                   initialDate: state.filterDate,
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2030),
-                  locale: const Locale('vi', 'VN'), // Optional: if app supports localization
-                  builder: (context, child) {
-                    return Theme(
-                      data: Theme.of(context).copyWith(
-                        colorScheme: const ColorScheme.light(
-                           primary: Color(0xFF00C389),
-                           onPrimary: Colors.white,
-                           onSurface: Color(0xFF0B1B2B),
-                        ),
-                      ),
-                      child: child!,
-                    );
-                  },
+                  locale: const Locale('vi', 'VN'),
                 );
-                
                 if (picked != null) {
                   context.read<AttendanceBloc>().add(AttendanceFilterChanged(picked));
                 }
               },
               child: Row(
                 children: [
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF9AA6B2),
-                    ),
-                  ),
+                  Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF9AA6B2))),
                   const SizedBox(width: 4),
                   const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9AA6B2)),
                 ],
@@ -231,63 +202,15 @@ class _TabLogs extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
-        if (state.error != null && state.logs.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    state.error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => context.read<AttendanceBloc>().add(const AttendanceRefreshed()),
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
         if (state.logs.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<AttendanceBloc>().add(const AttendanceRefreshed());
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.5,
-                child: const Center(
-                  child: Text(
-                    'Chưa có dữ liệu chấm công',
-                    style: TextStyle(color: Color(0xFF9AA6B2), fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-            ),
-          );
+          return const Center(child: Text('Chưa có dữ liệu chấm công'));
         }
-
         return RefreshIndicator(
-          onRefresh: () async {
-            context.read<AttendanceBloc>().add(const AttendanceRefreshed());
-          },
+          onRefresh: () async => context.read<AttendanceBloc>().add(const AttendanceRefreshed()),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
             children: [
-              const Text(
-                'Hôm nay',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF9AA6B2),
-                ),
-              ),
+              const Text('Hôm nay', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF9AA6B2))),
               const SizedBox(height: 10),
               for (final log in state.logs) ...[
                 _LogItem(log: log),
@@ -308,7 +231,6 @@ class _LogItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIn = log.action == AttendanceAction.checkIn;
-    // User requested: Vào ca (In) = Blue, Ra ca (Out) = Red
     final iconBg = isIn ? const Color(0xFF4F8DFD) : const Color(0xFFE53935);
 
     return Container(
@@ -316,23 +238,14 @@ class _LogItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 18, offset: const Offset(0, 10))],
       ),
       child: Row(
         children: [
           Container(
             width: 52,
             height: 52,
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(14),
-            ),
+            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(14)),
             child: const Icon(Icons.phone_iphone_rounded, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 14),
@@ -340,34 +253,13 @@ class _LogItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  log.userName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF0B1B2B),
-                  ),
-                ),
+                Text(log.userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0B1B2B))),
                 const SizedBox(height: 4),
-                Text(
-                  log.subtitle,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF9AA6B2),
-                  ),
-                ),
+                Text(log.subtitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF9AA6B2))),
               ],
             ),
           ),
-          Text(
-            _fmtHHmm(log.timestamp),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF0B1B2B),
-            ),
-          ),
+          Text(_fmtHHmm(log.timestamp), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0B1B2B))),
         ],
       ),
     );
@@ -376,87 +268,8 @@ class _LogItem extends StatelessWidget {
 
 class _TabBangCong extends StatelessWidget {
   const _TabBangCong();
-
   @override
-  Widget build(BuildContext context) {
-    // static mock data for now
-    final rows = const [
-      _BangCongRow(label: 'Ngày công thực tế', value: '0 công', chevron: true),
-      _BangCongRow(label: 'Giờ công thực tế', value: '0 giờ', chevron: true),
-      _BangCongRow(label: 'Số giờ làm dư giờ', value: '0 giờ 0 phút'),
-      _BangCongRow(label: 'Số giờ làm thêm', value: '0 giờ 0 phút'),
-      _BangCongRow(label: 'Số phút đi làm sớm', value: '0 phút'),
-      _BangCongRow(label: 'Giờ công tiêu chuẩn', value: '196 giờ'),
-      _BangCongRow(label: 'Số ngày nghỉ tiêu chuẩn', value: '0 ngày'),
-      _BangCongRow(label: 'Số ngày nghỉ không lương (chính thức)', value: '0 ngày'),
-      _BangCongRow(label: 'Công chuẩn', value: '24.5 ngày'),
-      _BangCongRow(label: 'Số ngày công nghỉ lễ', value: '0 ngày'),
-      _BangCongRow(label: 'Tổng công tính lương', value: '0 ngày'),
-      _BangCongRow(label: 'Số giờ về sớm', value: '0 giờ 0 phút', chevron: true),
-      _BangCongRow(label: 'Số giờ đi muộn', value: '0 giờ 0 phút', chevron: true),
-      _BangCongRow(label: 'Số giờ đi muộn, về sớm', value: '0 giờ 0 phút'),
-      _BangCongRow(label: 'Số lần quên checkin', value: '0', chevron: true, valueColor: Color(0xFFFF8A00)),
-      _BangCongRow(label: 'Số lần quên checkout', value: '0', chevron: true, valueColor: Color(0xFFFF8A00)),
-      _BangCongRow(label: 'Số lần quên checkin và checkout', value: '10', chevron: true, valueColor: Color(0xFFFF3B30)),
-    ];
-
-    return ListView(
-      padding: const EdgeInsets.only(top: 8),
-      children: [
-        for (final r in rows) _BangCongTile(row: r),
-      ],
-    );
-  }
-}
-
-class _BangCongRow {
-  final String label;
-  final String value;
-  final bool chevron;
-  final Color? valueColor;
-
-  const _BangCongRow({
-    required this.label,
-    required this.value,
-    this.chevron = false,
-    this.valueColor,
-  });
-}
-
-class _BangCongTile extends StatelessWidget {
-  final _BangCongRow row;
-  const _BangCongTile({required this.row});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 18),
-            title: Text(
-              row.label,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF5D6B78),
-              ),
-            ),
-            trailing: Text(
-              row.value,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                color: row.valueColor ?? const Color(0xFF0B1B2B),
-              ),
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const Center(child: Text('Bảng công'));
 }
 
 String _fmtHHmm(DateTime dt) {

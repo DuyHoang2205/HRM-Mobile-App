@@ -3,104 +3,106 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'home_event.dart';
 import 'home_state.dart';
 import '../../attendance/models/attendance_log.dart';
+import '../../../core/utils/attendance_action_resolver.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/auth/auth_helper.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Timer? _midnightTimer;
+  final DioClient _dioClient = DioClient();
 
   HomeBloc() : super(HomeState.initial()) {
     on<HomeStarted>((event, emit) {
       _scheduleMidnightRefresh(emit);
+      add(const AttendanceLogsRequested()); 
     });
 
-    on<NotificationTapped>((event, emit) {
-      // later: navigate to notifications
-    });
-
-    on<CheckInTapped>((event, emit) {
-      // No-op: actual API is called in CheckInBloc. Callers use CheckResultArrived with result.
-    });
+    on<AttendanceLogsRequested>(_onAttendanceLogsRequested);
 
     on<CheckResultArrived>((event, emit) {
+      // Optimistic Flip
       if (event.isCheckIn) {
-        emit(state.copyWith(
-          checkedInAt: event.timestamp,
-          checkedOutAt: null,
-        ));
+        emit(state.copyWith(checkedInAt: event.timestamp, checkedOutAt: null));
       } else {
-        emit(state.copyWith(checkedOutAt: event.timestamp));
+        emit(state.copyWith(checkedInAt: null, checkedOutAt: event.timestamp));
       }
+      add(const AttendanceLogsRequested()); 
     });
 
     on<AttendanceLogsLoaded>((event, emit) {
       DateTime? lastCheckIn;
       DateTime? lastCheckOut;
+      
+      final resolvedLogs = AttendanceActionResolver.resolve(event.logs);
 
-      // Logic to sync check-in status from logs
-      if (event.logs.isNotEmpty) {
-        // Find the LATEST log for TODAY (or overall, depending on logic)
-        // Since event.logs contains last 30 days, we should look for the latest log.
-        // Assuming logs are sorted (or we sort them here)
-        final sortedLogs = List<AttendanceLog>.from(event.logs)
-          ..sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Newest first
-
-        final latest = sortedLogs.first;
+      if (resolvedLogs.isNotEmpty) {
         final today = DateTime.now();
-
-        // Only update status if the log is from TODAY (or recently? Shift logic...)
-        // For simplicity, if the latest log is today, we respect it.
-        // If the latest log is checkIn -> we are checked in.
-        // If the latest log is checkOut -> we are checked out.
-
-        // Filter logs for today
-        final todayLogs = sortedLogs.where((log) => 
+        // Look for today's logs specifically
+        final todayLogs = resolvedLogs.where((log) => 
           log.timestamp.year == today.year &&
           log.timestamp.month == today.month &&
           log.timestamp.day == today.day
         ).toList();
 
-        print('DEBUG: HomeBloc Today: $today');
-        print('DEBUG: Total Logs: ${event.logs.length}');
-        print('DEBUG: Today Logs Count: ${todayLogs.length}');
         if (todayLogs.isNotEmpty) {
-           print('DEBUG: Latest Log: ${todayLogs.first.timestamp} - Action: ${todayLogs.length % 2 != 0 ? "IN" : "OUT"}');
-        }
-
-        if (todayLogs.isNotEmpty) {
-          // If count is ODD -> We are currently Checked IN (1st=In, 2nd=Out, 3rd=In...)
-          // If count is EVEN -> We are currently Checked OUT
+          // Newest log today (resolved as newest-first)
+          final latestLog = todayLogs.first; 
           
-          final isCheckedIn = todayLogs.length % 2 != 0;
-          final latest = todayLogs.first; // sortedLogs is desc, so this is latest
-
-          if (isCheckedIn) {
-            lastCheckIn = latest.timestamp;
+          if (latestLog.action == AttendanceAction.checkIn) {
+            lastCheckIn = latestLog.timestamp;
             lastCheckOut = null;
           } else {
-            // Checked out
             lastCheckIn = null;
-            lastCheckOut = latest.timestamp;
+            lastCheckOut = latestLog.timestamp;
           }
+        } else {
+          // If no logs today, reset to Blue (Vào ca)
+          lastCheckIn = null;
+          lastCheckOut = null;
         }
       }
 
       emit(state.copyWith(
-        attendanceLogs: event.logs,
-        checkedInAt: lastCheckIn,  // Auto-sync status
+        attendanceLogs: resolvedLogs,
+        checkedInAt: lastCheckIn,  
         checkedOutAt: lastCheckOut,
+        isLoading: false,
       ));
     });
   }
 
+  Future<void> _onAttendanceLogsRequested(AttendanceLogsRequested event, Emitter<HomeState> emit) async {
+    try {
+      final employeeId = await AuthHelper.getEmployeeId();
+      final siteID = await AuthHelper.getSiteId();
+      final now = DateTime.now();
+      String fmt(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+
+      final response = await _dioClient.dio.post(
+        'attendance/byEmployee/$siteID',
+        data: {
+          'employeeId': employeeId,
+          'fromDate': fmt(now.subtract(const Duration(days: 30))),
+          'toDate': fmt(now.add(const Duration(days: 1))),
+        },
+      );
+
+      final List<dynamic> raw = response.data is List ? response.data : [];
+      final logs = raw.map((e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e))).toList();
+      add(AttendanceLogsLoaded(logs));
+    } catch (e) {
+      emit(state.copyWith(isLoading: false));
+    }
+  }
+
   void _scheduleMidnightRefresh(Emitter<HomeState> emit) {
     _midnightTimer?.cancel();
-
     final now = DateTime.now();
     final nextMidnight = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
-    final duration = nextMidnight.difference(now) + const Duration(seconds: 2); // small buffer
-
+    final duration = nextMidnight.difference(now) + const Duration(seconds: 2);
     _midnightTimer = Timer(duration, () {
       emit(state.copyWith(today: DateTime.now()));
-      _scheduleMidnightRefresh(emit); // keep refreshing daily
+      _scheduleMidnightRefresh(emit);
     });
   }
 

@@ -78,7 +78,7 @@ class HomeHeader extends StatelessWidget {
               InkWell(
                 borderRadius: BorderRadius.circular(24),
                 onTap: () =>
-                    context.read<HomeBloc>().add(const NotificationTapped()),
+                    context.read<HomeBloc>().add( NotificationTapped()),
                 child: Container(
                   width: 48,
                   height: 48,

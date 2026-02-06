@@ -75,6 +75,7 @@ class AuthHelper {
   /// AUTHENTICATES SILENTLY WITH HARDCODED TOKEN
   static Future<void> silentLogin() async {
 
+    final hardToken = 
     if (kDebugMode) {
       print('------- USING HARDCODED TOKEN BYPASS -------');
     }
