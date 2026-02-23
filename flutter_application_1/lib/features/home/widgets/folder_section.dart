@@ -10,33 +10,16 @@ class FolderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Demo Clean-up: Only include functional actions to ensure a polished client experience
     final items = <_FolderData>[
-      _FolderData(
+      const _FolderData(
         title: 'Chấm công',
         icon: Icons.fingerprint_rounded,
         action: FolderAction.attendance,
       ),
-      _FolderData(
-        title: 'Phiếu lương',
-        icon: Icons.attach_money_rounded,
-        action: FolderAction.salary,
-      ),
-      _FolderData(
-        title: 'Làm ngoài giờ',
-        icon: Icons.access_time_rounded,
-        action: FolderAction.overtime,
-      ),
-      _FolderData(
-        title: 'Nghỉ phép',
-        icon: Icons.calendar_month_rounded,
-        action: FolderAction.leave,
-      ),
-      _FolderData(
-        title: 'Công tác',
-        icon: Icons.work_outline_rounded,
-        action: FolderAction.businessTrip,
-      ),
-      _FolderData.empty(),
+      // Future features (Salary, Overtime, Leave, etc.) are hidden for the demo build
+      const _FolderData.empty(),
+      const _FolderData.empty(),
     ];
 
     return Padding(
@@ -52,19 +35,17 @@ class FolderSection extends StatelessWidget {
               color: Color(0xFF0B1B2B),
             ),
           ),
-          // const SizedBox(height: 1),
-
-            GridView.builder(
-              shrinkWrap: true,
-              padding: EdgeInsets.only(top: 12),
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: items.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.83,
-              ),
+          GridView.builder(
+            shrinkWrap: true,
+            padding: const EdgeInsets.only(top: 12),
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: items.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              childAspectRatio: 0.83,
+            ),
             itemBuilder: (context, i) {
               final item = items[i];
               if (item.isEmpty) return const SizedBox.shrink();
@@ -82,6 +63,7 @@ class FolderSection extends StatelessWidget {
   }
 }
 
+// Keep the enum values so existing logic doesn't break, but we only use 'attendance' for the demo
 enum FolderAction { attendance, salary, overtime, leave, businessTrip }
 
 class _FolderData {
@@ -120,7 +102,6 @@ class _FolderTile extends StatelessWidget {
       builder: (context, c) {
         final w = c.maxWidth;
 
-        // mild scaling for small widths
         final iconSize = w < 110 ? 26.0 : 30.0;
         final bubble = w < 110 ? 50.0 : 56.0;
         final fontSize = w < 110 ? 13.5 : 15.0;
@@ -148,7 +129,6 @@ class _FolderTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 8),
-
                   Container(
                     width: bubble,
                     height: bubble,
@@ -162,11 +142,9 @@ class _FolderTile extends StatelessWidget {
                       color: const Color(0xFF0B2D5B),
                     ),
                   ),
-
                   SizedBox(height: gap),
-
                   SizedBox(
-                    height: fontSize * 2.3, // reserve 2 lines always
+                    height: fontSize * 2.3,
                     child: Align(
                       alignment: Alignment.topCenter,
                       child: Text(
@@ -176,7 +154,7 @@ class _FolderTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: fontSize,
-                          fontWeight: FontWeight.w700, 
+                          fontWeight: FontWeight.w700,
                           color: const Color(0xFF0B1B2B),
                           height: 1.15,
                         ),
@@ -184,7 +162,7 @@ class _FolderTile extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),           
+              ),
             ),
           ),
         );

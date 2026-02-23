@@ -1,0 +1,18 @@
+// Custom build settings to ensure dSYM generation
+// This file ensures debug symbols are always generated for App Store uploads
+
+// Generate dSYM files for all configurations
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+
+// Ensure symbols are not stripped during archiving
+STRIP_INSTALLED_PRODUCT = NO
+COPY_PHASE_STRIP = NO
+
+// Generate symbols for all architectures (not just active)
+ONLY_ACTIVE_ARCH = NO
+
+// Enable bitcode (if needed by your app)
+// ENABLE_BITCODE = NO is already set in main project
+
+// Deployment target
+IPHONEOS_DEPLOYMENT_TARGET = 13.0

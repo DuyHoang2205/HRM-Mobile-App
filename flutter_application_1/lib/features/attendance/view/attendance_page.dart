@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import '../../checkin/view/checkin_page.dart';
 import '../../checkin/models/checkin_result.dart';
 import '../bloc/attendance_bloc.dart';
@@ -26,22 +28,21 @@ class _AttendanceView extends StatefulWidget {
   State<_AttendanceView> createState() => _AttendanceViewState();
 }
 
-class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProviderStateMixin {
-  late final TabController _tab;
+class _AttendanceViewState extends State<_AttendanceView> /*with SingleTickerProviderStateMixin*/ {
+  // late final TabController _tab;
   CheckInResult? _lastResult; 
 
-  @override
-  void initState() {
-    super.initState();
-    _tab = TabController(length: 2, vsync: this);
-    _tab.index = 0; 
-  }
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _tab = TabController(length: 2, vsync: this);
+  // }
 
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _tab.dispose();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -52,31 +53,21 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
-          onPressed: () {
-            // CRITICAL FIX: Pass the result back to HomePage
-            Navigator.of(context).pop(_lastResult);
-          },
+          onPressed: () => Navigator.of(context).pop(_lastResult),
         ),
         titleSpacing: 0,
         title: const _AttendanceTitle(),
         actions: [
           IconButton(
-            onPressed: () {}, 
-            icon: const Icon(Icons.tune_rounded, color: Color(0xFF0B1B2B)),
-          ),
-          IconButton(
             onPressed: () async {
               final currentState = context.read<AttendanceBloc>().state;
-              final bool isCheckedIn = currentState.logs.isNotEmpty && 
-                                       currentState.logs.first.action == AttendanceAction.checkIn;
-
-              final lastCheckInTime = isCheckedIn ? currentState.logs.first.timestamp : null;
+              final bool isCheckedIn = currentState.isCheckedIn;
 
               final result = await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CheckInPage(
                     isCheckoutMode: isCheckedIn, 
-                    checkedInAt: lastCheckInTime,
+                    checkedInAt: isCheckedIn ? currentState.logs.first.timestamp : null,
                   ),
                 ),
               );
@@ -87,56 +78,35 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
                    isCheckIn: result.action == CheckAction.checkIn,
                    timestamp: result.timestamp,
                  ));
-              } else if (mounted) {
-                 context.read<AttendanceBloc>().add(const AttendanceRefreshed());
               }
             },
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B)),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(58),
-          child: Column(
-            children: [
-              TabBar(
-                controller: _tab,
-                indicatorColor: const Color(0xFF00C389),
-                indicatorWeight: 3,
-                labelColor: const Color(0xFF00C389),
-                unselectedLabelColor: const Color(0xFF9AA6B2),
-                labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                unselectedLabelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                tabs: const [
-                  Tab(text: 'Vào/Ra'),
-                  Tab(text: 'Bảng công'),
-                ],
-              ),
-              const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
-            ],
-          ),
-        ),
+        // bottom: PreferredSize(
+        //   preferredSize: const Size.fromHeight(58),
+        //   child: Column(
+        //     children: [
+        //       TabBar(
+        //         controller: _tab,
+        //         indicatorColor: const Color(0xFF00C389),
+        //         indicatorWeight: 3,
+        //         labelColor: const Color(0xFF00C389),
+        //         unselectedLabelColor: const Color(0xFF9AA6B2),
+        //         labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        //         unselectedLabelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        //         tabs: const [Tab(text: 'Vào/Ra'), Tab(text: 'Bảng công')],
+        //       ),
+        //       const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
+        //     ],
+        //   ),
+        // ),
       ),
-      body: Stack(
-        children: [
-          TabBarView(
-            controller: _tab,
-            children: const [
-              _TabLogs(),
-              _TabBangCong(),
-            ],
-          ),
-          BlocBuilder<AttendanceBloc, AttendanceState>(
-            buildWhen: (p, c) => p.isLoading != c.isLoading,
-            builder: (context, state) {
-              if (!state.isLoading) return const SizedBox.shrink();
-              return Container(
-                color: Colors.black26,
-                child: const Center(child: CircularProgressIndicator()),
-              );
-            },
-          ),
-        ],
-      ),
+      body: const _TabLogs(),
+      // body: TabBarView(
+      //   controller: _tab,
+      //   children: const [_TabLogs(), _TabBangCong()],
+      // ),
     );
   }
 }
@@ -155,24 +125,25 @@ class _AttendanceTitle extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         BlocBuilder<AttendanceBloc, AttendanceState>(
-          buildWhen: (p, c) => p.filterDate != c.filterDate,
           builder: (context, state) {
-            final date = state.filterDate;
-            final firstDay = DateTime(date.year, date.month, 1);
-            final lastDay = DateTime(date.year, date.month + 1, 0);
-            final text = '${_fmtDayMonth(firstDay)} - ${_fmtDayMonth(lastDay)}';
+            final start = state.filterDate;
+            final end = state.endDate ?? DateTime.now();
+            final text = '${_fmt(start)} - ${_fmt(end)}';
 
             return GestureDetector(
               onTap: () async {
-                final picked = await showDatePicker(
+                final picked = await showDateRangePicker(
                   context: context,
-                  initialDate: state.filterDate,
+                  initialDateRange: DateTimeRange(start: start, end: end),
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2030),
                   locale: const Locale('vi', 'VN'),
                 );
                 if (picked != null) {
-                  context.read<AttendanceBloc>().add(AttendanceFilterChanged(picked));
+                  context.read<AttendanceBloc>().add(AttendanceFilterChanged(
+                    start: picked.start,
+                    end: picked.end,
+                  ));
                 }
               },
               child: Row(
@@ -189,38 +160,63 @@ class _AttendanceTitle extends StatelessWidget {
     );
   }
 
-  String _fmtDayMonth(DateTime d) {
-    String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(d.day)}.${two(d.month)}';
-  }
+  String _fmt(DateTime d) => '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
 }
 
-class _TabLogs extends StatelessWidget {
+class _TabLogs extends StatefulWidget {
   const _TabLogs();
+
+  @override
+  State<_TabLogs> createState() => _TabLogsState();
+}
+
+class _TabLogsState extends State<_TabLogs> {
+  @override
+  void initState() {
+    super.initState();
+    initializeDateFormatting('vi_VN', null);
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
-        if (state.logs.isEmpty) {
-          return const Center(child: Text('Chưa có dữ liệu chấm công'));
+        if (state.logs.isEmpty) return const Center(child: Text('Chưa có dữ liệu'));
+
+        final Map<String, List<AttendanceLog>> grouped = {};
+        for (var log in state.logs) {
+          final key = DateFormat('yyyy-MM-dd').format(log.timestamp);
+          if (!grouped.containsKey(key)) grouped[key] = [];
+          grouped[key]!.add(log);
         }
-        return RefreshIndicator(
-          onRefresh: () async => context.read<AttendanceBloc>().add(const AttendanceRefreshed()),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-            children: [
-              const Text('Hôm nay', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF9AA6B2))),
-              const SizedBox(height: 10),
-              for (final log in state.logs) ...[
-                _LogItem(log: log),
-                const SizedBox(height: 14),
+
+        final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(18),
+          itemCount: sortedKeys.length,
+          itemBuilder: (context, index) {
+            final dateKey = sortedKeys[index];
+            final logs = grouped[dateKey]!;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_dateHeader(dateKey), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF9AA6B2))),
+                const SizedBox(height: 10),
+                ...logs.map((log) => Padding(padding: const EdgeInsets.only(bottom: 14), child: _LogItem(log: log))),
               ],
-            ],
-          ),
+            );
+          },
         );
       },
     );
+  }
+
+  String _dateHeader(String key) {
+    final d = DateTime.parse(key);
+    // Use Vietnamese locale for date formatting
+    // Example: Thứ Tư, 11 Tháng 02
+    return DateFormat('EEEE, dd MMMM', 'vi_VN').format(d);
   }
 }
 
@@ -231,35 +227,29 @@ class _LogItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIn = log.action == AttendanceAction.checkIn;
-    final iconBg = isIn ? const Color(0xFF4F8DFD) : const Color(0xFFE53935);
-
+    final subtitle = isIn ? 'Vào ca trên điện thoại' : 'Ra ca trên điện thoại';
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 18, offset: const Offset(0, 10))],
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: [
           Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.phone_iphone_rounded, color: Colors.white, size: 26),
+            width: 52, height: 52,
+            decoration: BoxDecoration(
+              // Blue for CheckIn, Red for CheckOut
+              color: isIn ? const Color(0xFF4F8DFD) : const Color(0xFFE53935), 
+              borderRadius: BorderRadius.circular(14)
+            ),
+            child: const Icon(Icons.phone_iphone_rounded, color: Colors.white),
           ),
           const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(log.userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0B1B2B))),
-                const SizedBox(height: 4),
-                Text(log.subtitle, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF9AA6B2))),
-              ],
-            ),
-          ),
-          Text(_fmtHHmm(log.timestamp), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0B1B2B))),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(log.userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+            Text(subtitle, style: const TextStyle(fontSize: 15, color: Color(0xFF9AA6B2))),
+          ])),
+          Text('${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}', 
+               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -268,11 +258,76 @@ class _LogItem extends StatelessWidget {
 
 class _TabBangCong extends StatelessWidget {
   const _TabBangCong();
+
   @override
-  Widget build(BuildContext context) => const Center(child: Text('Bảng công'));
+  Widget build(BuildContext context) {
+    return BlocBuilder<AttendanceBloc, AttendanceState>(
+      builder: (context, state) {
+        if (state.logs.isEmpty) return const Center(child: Text('Chưa có dữ liệu cho Bảng công'));
+
+        // Grouping logs by date for Bảng công
+        final Map<String, List<AttendanceLog>> dailyLogs = {};
+        for (var log in state.logs) {
+          final key = DateFormat('yyyy-MM-dd').format(log.timestamp);
+          dailyLogs.putIfAbsent(key, () => []).add(log);
+        }
+
+        final sortedDates = dailyLogs.keys.toList()..sort((a, b) => b.compareTo(a));
+
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
+          itemCount: sortedDates.length,
+          itemBuilder: (context, index) {
+            final dateStr = sortedDates[index];
+            final logs = dailyLogs[dateStr]!;
+            
+            final formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr));
+            final totalLogs = logs.length;
+            
+            return _BangCongTile(
+              label: formattedDate,
+              value: '$totalLogs lần',
+              // Visual cue: Red text if there is an odd number of logs (likely missed a checkout)
+              valueColor: totalLogs % 2 != 0 ? const Color(0xFFFF3B30) : const Color(0xFF00C389),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
-String _fmtHHmm(DateTime dt) {
-  String two(int v) => v.toString().padLeft(2, '0');
-  return '${two(dt.hour)}:${two(dt.minute)}';
+class _BangCongTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+
+  const _BangCongTile({
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18),
+            title: Text(
+              label,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF5D6B78)),
+            ),
+            trailing: Text(
+              value,
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: valueColor ?? const Color(0xFF0B1B2B)),
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
+        ],
+      ),
+    );
+  }
 }

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home_bloc.dart';
 import '../bloc/home_event.dart';
 import '../bloc/home_state.dart';
+import '../../../core/auth/auth_helper.dart';
+import '../../auth/view/login_screen.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
@@ -22,7 +24,7 @@ class HomeHeader extends StatelessWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar
+              // Avatar Section
               Container(
                 width: 52,
                 height: 52,
@@ -43,7 +45,7 @@ class HomeHeader extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // Name + role
+              // Name + role Section
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -74,11 +76,22 @@ class HomeHeader extends StatelessWidget {
                 ),
               ),
 
-              // Bell button
+              // Bell button Section
               InkWell(
                 borderRadius: BorderRadius.circular(24),
-                onTap: () =>
-                    context.read<HomeBloc>().add( NotificationTapped()),
+                onTap: () {
+                  // Demo Logic: Show a professional feedback message instead of navigating
+                  // to a broken or empty notification page.
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Bạn không có thông báo mới nào.'),
+                      duration: Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  // Optional: keep the event for analytics/logging
+                  context.read<HomeBloc>().add(NotificationTapped());
+                },
                 child: Container(
                   width: 48,
                   height: 48,
@@ -90,6 +103,34 @@ class HomeHeader extends StatelessWidget {
                     Icons.notifications_none_rounded,
                     color: Colors.white,
                     size: 26,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              
+              // Logout button Section
+              InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: () async {
+                  await AuthHelper.clear();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.redAccent,
+                    size: 24,
                   ),
                 ),
               ),

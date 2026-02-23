@@ -2,7 +2,6 @@ import 'package:equatable/equatable.dart';
 
 abstract class AttendanceEvent extends Equatable {
   const AttendanceEvent();
-
   @override
   List<Object?> get props => [];
 }
@@ -16,16 +15,19 @@ class AttendanceRefreshed extends AttendanceEvent {
 }
 
 class AttendanceFilterChanged extends AttendanceEvent {
-  final DateTime date;
-  const AttendanceFilterChanged(this.date);
+  final DateTime start;
+  final DateTime end;
+
+  const AttendanceFilterChanged({required this.start, required this.end});
 
   @override
-  List<Object?> get props => [date];
+  List<Object?> get props => [start, end];
 }
 
 class AttendanceCheckResultArrived extends AttendanceEvent {
   final bool isCheckIn;
-  final DateTime timestamp; // Optional, if we want to add a temporary log
+  final DateTime timestamp;
+
   const AttendanceCheckResultArrived({required this.isCheckIn, required this.timestamp});
 
   @override

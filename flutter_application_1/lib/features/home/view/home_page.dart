@@ -11,8 +11,8 @@ import '../../checkin/models/checkin_result.dart';
 import '../widgets/folder_section.dart';
 import '../models/folder_item.dart';
 import '../../attendance/view/attendance_page.dart';
-import '../../overtime/view/overtime_list_page.dart';
-import '../../leave/view/leave_list_page.dart';
+
+// Note: Removed Overtime and Leave imports to keep the demo build clean
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -52,7 +52,7 @@ class _HomeView extends StatelessWidget {
                           const SizedBox(height: 16),
                           ShiftCard(
                             onTap: () async {
-                              // Navigator always uses the latest state
+                              // Navigates to the working Check-In flow
                               final result = await Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) => CheckInPage(
@@ -73,6 +73,7 @@ class _HomeView extends StatelessWidget {
                           const SizedBox(height: 18),
                           FolderSection(
                             onTap: (action) async {
+                              // Demo Clean-up: Only allow the Attendance action
                               if (action == FolderAction.attendance) {
                                 final result = await Navigator.of(context).push(
                                   MaterialPageRoute(builder: (_) => const AttendancePage()),
@@ -80,21 +81,16 @@ class _HomeView extends StatelessWidget {
 
                                 if (context.mounted) {
                                   if (result is CheckInResult) {
-                                    // Manually tell HomeBloc that an action happened
                                     context.read<HomeBloc>().add(CheckResultArrived(
                                       timestamp: result.timestamp,
                                       isCheckIn: result.action == CheckAction.checkIn,
                                     ));
                                   } else {
-                                    // Always refresh to stay synced
                                     context.read<HomeBloc>().add(const AttendanceLogsRequested());
                                   }
                                 }
-                              } else if (action == FolderAction.overtime) {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const OvertimeListPage()));
-                              } else if (action == FolderAction.leave) {
-                                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LeaveListPage()));
                               }
+                              // Overtime and Leave actions are removed/ignored for the demo
                             },
                           ),
                           const SizedBox(height: 22),

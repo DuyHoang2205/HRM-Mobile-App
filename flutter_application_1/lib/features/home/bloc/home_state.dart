@@ -1,65 +1,69 @@
-import 'package:equatable/equatable.dart';
+import 'package:intl/intl.dart';
 import '../../attendance/models/attendance_log.dart';
 
-class HomeState extends Equatable {
-  final DateTime today;
+class HomeState {
   final List<AttendanceLog> attendanceLogs;
   final DateTime? checkedInAt;
   final DateTime? checkedOutAt;
   final bool isLoading;
+  final DateTime today;
   final String name;
-  final String initials;
   final String role;
+  final String initials;
 
-  const HomeState({
-    required this.today,
+  HomeState({
     required this.attendanceLogs,
     this.checkedInAt,
     this.checkedOutAt,
-    this.isLoading = false,
-    this.name = 'Duy Hoang',
-    this.initials = 'DH',
-    this.role = 'Software Engineer',
+    required this.isLoading,
+    required this.today,
+    required this.name,
+    required this.role,
+    required this.initials,
   });
 
-  factory HomeState.initial() => HomeState(today: DateTime.now(), attendanceLogs: const []);
+  factory HomeState.initial() => HomeState(
+        attendanceLogs: [],
+        isLoading: false,
+        today: DateTime.now(),
+        name: "Trung Nguyen", 
+        role: "Giám đốc",
+        initials: "TN",
+      );
 
-  // Card is RED (Ra ca) only if we have a check-in and haven't checked out yet
   bool get isCheckoutMode => checkedInAt != null && checkedOutAt == null;
 
-  String get shiftLabel => isCheckoutMode ? 'Ra ca' : 'Vào ca';
+  String get shiftLabel => isCheckoutMode ? "Ra ca" : "Vào ca";
 
+  // Updated getter to remove seconds
   String get shiftTime {
     if (isCheckoutMode && checkedInAt != null) {
-      return 'Đã vào: ${_fmtTime(checkedInAt!)}';
+      // Formats as "Vào lúc: 08:30"
+      return "Vào lúc: ${DateFormat('HH:mm').format(checkedInAt!)}";
     }
-    return 'Giờ hiện tại: ${_fmtTime(DateTime.now())}';
+    // Formats current time as "08:30" instead of "08:30:45"
+    return DateFormat('HH:mm').format(DateTime.now());
   }
 
-  static String _fmtTime(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-
   HomeState copyWith({
-    DateTime? today,
     List<AttendanceLog>? attendanceLogs,
     DateTime? checkedInAt,
     DateTime? checkedOutAt,
     bool? isLoading,
+    DateTime? today,
     String? name,
-    String? initials,
     String? role,
+    String? initials,
   }) {
     return HomeState(
-      today: today ?? this.today,
       attendanceLogs: attendanceLogs ?? this.attendanceLogs,
-      checkedInAt: checkedInAt, // Direct assignment allows nulls
+      checkedInAt: checkedInAt, 
       checkedOutAt: checkedOutAt,
       isLoading: isLoading ?? this.isLoading,
+      today: today ?? this.today,
       name: name ?? this.name,
-      initials: initials ?? this.initials,
       role: role ?? this.role,
+      initials: initials ?? this.initials,
     );
   }
-
-  @override
-  List<Object?> get props => [today, attendanceLogs, checkedInAt, checkedOutAt, isLoading, name, initials, role];
 }

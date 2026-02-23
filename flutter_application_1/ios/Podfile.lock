@@ -1,5 +1,8 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_secure_storage_darwin (10.0.0):
+    - Flutter
+    - FlutterMacOS
   - geolocator_apple (1.2.0):
     - Flutter
     - FlutterMacOS
@@ -15,6 +18,7 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - network_info_plus (from `.symlinks/plugins/network_info_plus/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
@@ -24,6 +28,8 @@ DEPENDENCIES:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_secure_storage_darwin:
+    :path: ".symlinks/plugins/flutter_secure_storage_darwin/darwin"
   geolocator_apple:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
   network_info_plus:
@@ -37,12 +43,13 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  flutter_secure_storage_darwin: acdb3f316ed05a3e68f856e0353b133eec373a23
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
   network_info_plus: cf61925ab5205dce05a4f0895989afdb6aade5fc
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 1e671dde7f289ce55803ffa253174d8524ea8dbd
 
 COCOAPODS: 1.16.2

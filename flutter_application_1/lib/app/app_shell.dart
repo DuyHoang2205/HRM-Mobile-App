@@ -56,23 +56,23 @@ Future<void> _openPlusMenu() async {
         children: _pages,
       ),
 
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: SizedBox(
-        width: 75, 
-        height: 75,
-        child: FloatingActionButton(
-          backgroundColor: const Color(0xFF0B2A5B),
-          elevation: 8,
-          shape: const CircleBorder(),
-          onPressed: _openPlusMenu,
-          // Change icon and color based on state
-          child: Icon(
-            _isMenuOpen ? Icons.close : Icons.add, 
-            size: 30, 
-            color: Colors.white, // Now explicitly white
-          ),
-        ),
-      ),
+      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // floatingActionButton: SizedBox(
+      //   width: 75, 
+      //   height: 75,
+      //   child: FloatingActionButton(
+      //     backgroundColor: const Color(0xFF0B2A5B),
+      //     elevation: 8,
+      //     shape: const CircleBorder(),
+      //     onPressed: _openPlusMenu,
+      //     // Change icon and color based on state
+      //     child: Icon(
+      //       _isMenuOpen ? Icons.close : Icons.add, 
+      //       size: 30, 
+      //       color: Colors.white, // Now explicitly white
+      //     ),
+      //   ),
+      // ),
 
 bottomNavigationBar: BottomAppBar(
   color: Colors.white,
@@ -101,36 +101,36 @@ bottomNavigationBar: BottomAppBar(
                   onTap: () => setState(() => _index = 0),
                 ),
               ),
-              Expanded(
-                child: _NavItem(
-                  label: 'My task',
-                  icon: Icons.task_alt_outlined,
-                  activeIcon: Icons.task_alt,
-                  selected: _index == 1,
-                  onTap: () => setState(() => _index = 1),
-                ),
-              ),
+              // Expanded(
+              //   child: _NavItem(
+              //     label: 'My task',
+              //     icon: Icons.task_alt_outlined,
+              //     activeIcon: Icons.task_alt,
+              //     selected: _index == 1,
+              //     onTap: () => setState(() => _index = 1),
+              //   ),
+              // ),
 
-              const SizedBox(width: 62), // space for FAB
+              // const SizedBox(width: 62), // space for FAB
 
-              Expanded(
-                child: _NavItem(
-                  label: 'Payment',
-                  icon: Icons.attach_money_outlined,
-                  activeIcon: Icons.attach_money,
-                  selected: _index == 2,
-                  onTap: () => setState(() => _index = 2),
-                ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  label: 'Profile',
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
-                  selected: _index == 3,
-                  onTap: () => setState(() => _index = 3),
-                ),
-              ),
+              // Expanded(
+              //   child: _NavItem(
+              //     label: 'Payment',
+              //     icon: Icons.attach_money_outlined,
+              //     activeIcon: Icons.attach_money,
+              //     selected: _index == 2,
+              //     onTap: () => setState(() => _index = 2),
+              //   ),
+              // ),
+              // Expanded(
+              //   child: _NavItem(
+              //     label: 'Profile',
+              //     icon: Icons.person_outline,
+              //     activeIcon: Icons.person,
+              //     selected: _index == 3,
+              //     onTap: () => setState(() => _index = 3),
+              //   ),
+              // ),
             ],
           ),
         ),
