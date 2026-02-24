@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/features/home/view/home_page.dart';
-// import '../../features/home/view/home_page.dart';
 import '../../../core/widgets/placeholder_page.dart';
 
 class AppShell extends StatefulWidget {
@@ -56,40 +55,34 @@ Future<void> _openPlusMenu() async {
         children: _pages,
       ),
 
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      // floatingActionButton: SizedBox(
-      //   width: 75, 
-      //   height: 75,
-      //   child: FloatingActionButton(
-      //     backgroundColor: const Color(0xFF0B2A5B),
-      //     elevation: 8,
-      //     shape: const CircleBorder(),
-      //     onPressed: _openPlusMenu,
-      //     // Change icon and color based on state
-      //     child: Icon(
-      //       _isMenuOpen ? Icons.close : Icons.add, 
-      //       size: 30, 
-      //       color: Colors.white, // Now explicitly white
-      //     ),
-      //   ),
-      // ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: SizedBox(
+        width: 75, 
+        height: 75,
+        child: FloatingActionButton(
+          backgroundColor: const Color(0xFF0B2A5B),
+          elevation: 8,
+          shape: const CircleBorder(),
+          onPressed: _openPlusMenu,
+          // Change icon and color based on state
+          child: Icon(
+            _isMenuOpen ? Icons.close : Icons.add, 
+            size: 30, 
+            color: Colors.white, // Now explicitly white
+          ),
+        ),
+      ),
 
-bottomNavigationBar: BottomAppBar(
-  color: Colors.white,
-  elevation: 10,
-  shadowColor: const Color(0x14000000),
-  shape: const CircularNotchedRectangle(),
-  notchMargin: 10,
-  child: Builder(
-    builder: (context) {
-      final bottomInset = MediaQuery.of(context).padding.bottom;
-
-      return SizedBox(
-
-        height: 64 + bottomInset,
-        child: Padding(
-
-          padding: EdgeInsets.only(bottom: bottomInset),
+bottomNavigationBar: Transform.translate(
+        offset: const Offset(0, 12.0), 
+        child: BottomAppBar(
+          color: Colors.white,
+          elevation: 10,
+          shadowColor: const Color(0x14000000),
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 10,
+          padding: EdgeInsets.zero,
+          height: 80, 
           child: Row(
             children: [
               Expanded(
@@ -101,43 +94,38 @@ bottomNavigationBar: BottomAppBar(
                   onTap: () => setState(() => _index = 0),
                 ),
               ),
-              // Expanded(
-              //   child: _NavItem(
-              //     label: 'My task',
-              //     icon: Icons.task_alt_outlined,
-              //     activeIcon: Icons.task_alt,
-              //     selected: _index == 1,
-              //     onTap: () => setState(() => _index = 1),
-              //   ),
-              // ),
-
-              // const SizedBox(width: 62), // space for FAB
-
-              // Expanded(
-              //   child: _NavItem(
-              //     label: 'Payment',
-              //     icon: Icons.attach_money_outlined,
-              //     activeIcon: Icons.attach_money,
-              //     selected: _index == 2,
-              //     onTap: () => setState(() => _index = 2),
-              //   ),
-              // ),
-              // Expanded(
-              //   child: _NavItem(
-              //     label: 'Profile',
-              //     icon: Icons.person_outline,
-              //     activeIcon: Icons.person,
-              //     selected: _index == 3,
-              //     onTap: () => setState(() => _index = 3),
-              //   ),
-              // ),
+              Expanded(
+                child: _NavItem(
+                  label: 'My task',
+                  icon: Icons.task_alt_outlined,
+                  activeIcon: Icons.task_alt,
+                  selected: _index == 1,
+                  onTap: () => setState(() => _index = 1),
+                ),
+              ),
+              const SizedBox(width: 62), 
+              Expanded(
+                child: _NavItem(
+                  label: 'Payment',
+                  icon: Icons.attach_money_outlined,
+                  activeIcon: Icons.attach_money,
+                  selected: _index == 2,
+                  onTap: () => setState(() => _index = 2),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  label: 'Profile',
+                  icon: Icons.person_outline,
+                  activeIcon: Icons.person,
+                  selected: _index == 3,
+                  onTap: () => setState(() => _index = 3),
+                ),
+              ),
             ],
           ),
         ),
-      );
-    },
-  ),
-),
+      ),
     );
   }
 }
@@ -230,7 +218,8 @@ class _PlusMenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fabCenterY = screenSize.height - (64 + MediaQuery.of(context).padding.bottom) - 31;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final fabCenterY = screenSize.height - (48 + bottomInset) - 37;
 
     return Stack(
       children: [
@@ -278,4 +267,3 @@ class _PlusMenuOverlay extends StatelessWidget {
     );
   }
 }
-

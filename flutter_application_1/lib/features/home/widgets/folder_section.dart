@@ -17,8 +17,26 @@ class FolderSection extends StatelessWidget {
         icon: Icons.fingerprint_rounded,
         action: FolderAction.attendance,
       ),
-      // Future features (Salary, Overtime, Leave, etc.) are hidden for the demo build
-      const _FolderData.empty(),
+      const _FolderData(
+        title: 'Phiếu lương',
+        icon: Icons.attach_money_rounded,
+        action: FolderAction.salary,
+      ),
+      const _FolderData(
+        title: 'Làm ngoài giờ',
+        icon: Icons.access_time_rounded,
+        action: FolderAction.overtime,
+      ),
+      const _FolderData(
+        title: 'Nghỉ phép',
+        icon: Icons.calendar_month_rounded,
+        action: FolderAction.leave,
+      ),
+      const _FolderData(
+        title: 'Công tác',
+        icon: Icons.work_outline_rounded,
+        action: FolderAction.businessTrip,
+      ),
       const _FolderData.empty(),
     ];
 

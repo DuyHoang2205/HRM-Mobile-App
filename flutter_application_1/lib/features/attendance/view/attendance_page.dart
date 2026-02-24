@@ -28,21 +28,21 @@ class _AttendanceView extends StatefulWidget {
   State<_AttendanceView> createState() => _AttendanceViewState();
 }
 
-class _AttendanceViewState extends State<_AttendanceView> /*with SingleTickerProviderStateMixin*/ {
-  // late final TabController _tab;
+class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProviderStateMixin {
+  late final TabController _tab;
   CheckInResult? _lastResult; 
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _tab = TabController(length: 2, vsync: this);
-  // }
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 2, vsync: this);
+  }
 
-  // @override
-  // void dispose() {
-  //   _tab.dispose();
-  //   super.dispose();
-  // }
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,30 +83,29 @@ class _AttendanceViewState extends State<_AttendanceView> /*with SingleTickerPro
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B)),
           ),
         ],
-        // bottom: PreferredSize(
-        //   preferredSize: const Size.fromHeight(58),
-        //   child: Column(
-        //     children: [
-        //       TabBar(
-        //         controller: _tab,
-        //         indicatorColor: const Color(0xFF00C389),
-        //         indicatorWeight: 3,
-        //         labelColor: const Color(0xFF00C389),
-        //         unselectedLabelColor: const Color(0xFF9AA6B2),
-        //         labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        //         unselectedLabelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        //         tabs: const [Tab(text: 'Vào/Ra'), Tab(text: 'Bảng công')],
-        //       ),
-        //       const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
-        //     ],
-        //   ),
-        // ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(58),
+          child: Column(
+            children: [
+              TabBar(
+                controller: _tab,
+                indicatorColor: const Color(0xFF00C389),
+                indicatorWeight: 3,
+                labelColor: const Color(0xFF00C389),
+                unselectedLabelColor: const Color(0xFF9AA6B2),
+                labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                unselectedLabelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                tabs: const [Tab(text: 'Vào/Ra'), Tab(text: 'Bảng công')],
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
+            ],
+          ),
+        ),
       ),
-      body: const _TabLogs(),
-      // body: TabBarView(
-      //   controller: _tab,
-      //   children: const [_TabLogs(), _TabBangCong()],
-      // ),
+      body: TabBarView(
+        controller: _tab,
+        children: const [_TabLogs(), _TabBangCong()],
+      ),
     );
   }
 }
