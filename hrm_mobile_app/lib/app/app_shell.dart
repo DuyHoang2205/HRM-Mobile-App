@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/features/home/view/home_page.dart';
+import 'package:hrm_mobile_app/features/home/view/home_page.dart';
 import '../../../core/widgets/placeholder_page.dart';
 
 class AppShell extends StatefulWidget {
