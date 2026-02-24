@@ -7,8 +7,7 @@ import '../widgets/schedule_section.dart';
 import '../widgets/shift_card.dart';
 import '../../checkin/view/checkin_page.dart';
 import '../../checkin/models/checkin_result.dart';
-import '../../../core/demo/demo_attendance_store.dart';
-import '../../attendance/models/attendance_log.dart';
+
 import '../widgets/folder_section.dart';
 import '../models/folder_item.dart';
 import '../../attendance/view/attendance_page.dart';
@@ -58,20 +57,6 @@ class _HomeView extends StatelessWidget {
                       CheckResultArrived(
                         timestamp: result.timestamp,
                         isCheckIn: result.action == CheckAction.checkIn,
-                      ),
-                    );
-
-                    final action = result.action == CheckAction.checkIn
-                        ? AttendanceAction.checkIn
-                        : AttendanceAction.checkOut;
-
-                    DemoAttendanceStore.add(
-                      AttendanceLog(
-                        id: DateTime.now().millisecondsSinceEpoch,
-                        timestamp: result.timestamp,
-                        action: action,
-                        userName: context.read<HomeBloc>().state.name,
-                        subtitle: 'Vào/Ra ca trên điện thoại',
                       ),
                     );
                   }
