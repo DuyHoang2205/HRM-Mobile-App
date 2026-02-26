@@ -26,7 +26,7 @@ class _LeaveRegistrationView extends StatefulWidget {
 
 class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
   final _formKey = GlobalKey<FormState>();
-  
+
   DateTime? _startDate;
   DateTime? _endDate;
   String? _selectedReason;
@@ -54,18 +54,29 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
     return BlocListener<LeaveBloc, LeaveState>(
       listener: (context, state) {
         if (state.submitSuccess != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.submitSuccess!)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.submitSuccess!)));
           Navigator.of(context).pop(true);
         }
       },
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text('Đăng ký nghỉ', style: TextStyle(color: Color(0xFF0B1B2B), fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Đăng ký nghỉ',
+            style: TextStyle(
+              color: Color(0xFF0B1B2B),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Color(0xFF0B1B2B),
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -81,7 +92,10 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                 InkWell(
                   onTap: () => _pickDate(true),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
@@ -89,13 +103,20 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_fmtDate(_startDate), style: const TextStyle(fontSize: 16)),
-                        const Icon(Icons.calendar_today_outlined, color: Colors.grey, size: 20),
+                        Text(
+                          _fmtDate(_startDate),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
                       ],
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
 
                 _buildLabel('Ngày kết thúc', required: true),
@@ -103,7 +124,10 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                 InkWell(
                   onTap: () => _pickDate(false),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
@@ -111,8 +135,15 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_fmtDate(_endDate), style: const TextStyle(fontSize: 16)),
-                        const Icon(Icons.calendar_today_outlined, color: Colors.grey, size: 20),
+                        Text(
+                          _fmtDate(_endDate),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
                       ],
                     ),
                   ),
@@ -123,13 +154,29 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                   ),
                   initialValue: _selectedReason,
                   isExpanded: true,
-                  items: _reasons.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                  items: _reasons
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: Text(e, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => _selectedReason = v),
                   validator: (v) => v == null ? 'Vui lòng chọn lý do' : null,
                 ),
@@ -140,9 +187,18 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                 TextFormField(
                   controller: _locationCtrl,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
                   ),
                 ),
 
@@ -153,14 +209,25 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                   controller: _descCtrl,
                   maxLines: 4,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập diễn giải' : null,
+                  validator: (v) => (v == null || v.isEmpty)
+                      ? 'Vui lòng nhập diễn giải'
+                      : null,
                 ),
 
                 const SizedBox(height: 16),
-                const Text('Tệp đính kèm...', style: TextStyle(color: Colors.grey)),
+                const Text(
+                  'Tệp đính kèm...',
+                  style: TextStyle(color: Colors.grey),
+                ),
                 const SizedBox(height: 8),
 
                 // Attached Files List
@@ -169,7 +236,10 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                     children: _attachedFiles.map((file) {
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(8),
@@ -177,12 +247,19 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.attach_file, color: Colors.grey, size: 20),
+                            const Icon(
+                              Icons.attach_file,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 file,
-                                style: const TextStyle(fontSize: 14, color: Colors.black87),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -194,7 +271,11 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                               },
                               child: const Padding(
                                 padding: EdgeInsets.all(4.0),
-                                child: Icon(Icons.close, color: Colors.red, size: 18),
+                                child: Icon(
+                                  Icons.close,
+                                  color: Colors.red,
+                                  size: 18,
+                                ),
                               ),
                             ),
                           ],
@@ -205,20 +286,30 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
 
                 InkWell(
                   onTap: () {
-                     // MOCK FILE PICKING
-                     setState(() {
-                       _attachedFiles.add('minh_chung_benh_an_${_attachedFiles.length + 1}.jpg');
-                     });
+                    // MOCK FILE PICKING
+                    setState(() {
+                      _attachedFiles.add(
+                        'minh_chung_benh_an_${_attachedFiles.length + 1}.jpg',
+                      );
+                    });
                   },
                   child: Row(
                     children: [
-                       const Icon(Icons.upload_file_outlined, color: Color(0xFF0B2D5B)),
-                       const SizedBox(width: 8),
-                       const Text('Thêm', style: TextStyle(color: Color(0xFF0B2D5B), fontWeight: FontWeight.bold)),
+                      const Icon(
+                        Icons.upload_file_outlined,
+                        color: Color(0xFF0B2D5B),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Thêm',
+                        style: TextStyle(
+                          color: Color(0xFF0B2D5B),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-
               ],
             ),
           ),
@@ -229,7 +320,7 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, -4),
               ),
@@ -242,19 +333,29 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
               child: BlocBuilder<LeaveBloc, LeaveState>(
                 builder: (context, state) {
                   return ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFCACFD6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ).copyWith(
-                      backgroundColor: WidgetStateProperty.resolveWith((states) {
-                         if (states.contains(WidgetState.disabled)) return const Color(0xFFCACFD6);
-                         return const Color(0xFF00C389);
-                      }), 
-                    ),
+                    style:
+                        ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFCACFD6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ).copyWith(
+                          backgroundColor: WidgetStateProperty.resolveWith((
+                            states,
+                          ) {
+                            if (states.contains(WidgetState.disabled)) {
+                              return const Color(0xFFCACFD6);
+                            }
+                            return const Color(0xFF00C389);
+                          }),
+                        ),
                     onPressed: state.isSubmitting ? null : _submit,
-                    child: state.isSubmitting 
-                        ? const CircularProgressIndicator(color: Colors.white) 
-                        : const Text('Gửi yêu cầu', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    child: state.isSubmitting
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            'Gửi yêu cầu',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                   );
                 },
               ),
@@ -269,9 +370,17 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
     return RichText(
       text: TextSpan(
         text: text,
-        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 16),
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+          fontSize: 16,
+        ),
         children: [
-          if (required) const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+          if (required)
+            const TextSpan(
+              text: ' *',
+              style: TextStyle(color: Colors.red),
+            ),
         ],
       ),
     );
@@ -280,14 +389,10 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
   String _fmtDate(DateTime? d) {
     if (d == null) return '';
     String two(int v) => v.toString().padLeft(2, '0');
-    return '${d.day} ${d.month < 10 ? '0${d.month}' : d.month} ${d.year}';
-     // Format like "5 Feb 2026" in image? Image shows "5 Feb 2026". 
-     // Let's stick to simple DD/MM/YYYY for consistency with app or try to match image exact?
-     // Image: "5 Feb 2026". 
-     // Let's use simple numeric for now to be safe with Locales: DD/MM/YYYY
-     return '${two(d.day)}/${two(d.month)}/${d.year}';
+    // Format numeric: DD/MM/YYYY
+    return '${two(d.day)}/${two(d.month)}/${d.year}';
   }
-  
+
   // Future<String> _fmtDateImageStyle(DateTime? d) async {
   //   // If we want "5 Feb 2026", we need DateFormat.
   //   // Keeping it simple.
@@ -314,10 +419,14 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
       if (_startDate == null || _endDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ngày bắt đầu và kết thúc')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng chọn ngày bắt đầu và kết thúc'),
+          ),
+        );
         return;
       }
-      
+
       final req = LeaveRequest(
         id: 0,
         startDate: _startDate!,
@@ -328,7 +437,7 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
         status: 'PENDING',
         createdDate: DateTime.now(),
       );
-      
+
       context.read<LeaveBloc>().add(LeaveRequestSubmitted(req));
     }
   }

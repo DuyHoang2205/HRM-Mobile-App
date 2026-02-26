@@ -94,7 +94,7 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
                         height: 60,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00C389).withOpacity(0.2),
+                            color: const Color(0xFF00C389).withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -169,7 +169,7 @@ class _PillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white.withOpacity(0.9),
+      color: Colors.white.withValues(alpha: 0.9),
       borderRadius: BorderRadius.circular(20),
       elevation: 3,
       shadowColor: Colors.black26,

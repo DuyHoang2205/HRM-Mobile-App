@@ -142,8 +142,8 @@ class _OvertimeListView extends StatelessWidget {
                                   ? const Color(0xFFFEF3C7)
                                   : (req.status == 'Đã duyệt' ||
                                         req.status == 'APPROVED')
-                                  ? Colors.green.withOpacity(0.1)
-                                  : Colors.red.withOpacity(0.1),
+                                  ? Colors.green.withValues(alpha: 0.1)
+                                  : Colors.red.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(

@@ -51,6 +51,7 @@ class _HomeView extends StatelessWidget {
                     ),
                   );
 
+                  if (!context.mounted) return;
                   if (result is CheckInResult) {
                     context.read<HomeBloc>().add(
                       CheckResultArrived(
@@ -69,7 +70,9 @@ class _HomeView extends StatelessWidget {
                   switch (action) {
                     case FolderAction.attendance:
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const AttendancePage()),
+                        MaterialPageRoute(
+                          builder: (_) => const AttendancePage(),
+                        ),
                       );
                       break;
                     default:

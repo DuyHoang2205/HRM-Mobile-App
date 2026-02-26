@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../../core/network/dio_client.dart';
 import 'models/location.dart';
 
@@ -10,14 +11,14 @@ class LocationRepository {
     final allLocations = <Location>[];
     for (final siteId in siteIds) {
       try {
-        print('Fetching locations for site: $siteId');
+        debugPrint('Fetching locations for site: $siteId');
         final response = await _dioClient.dio.get('location/$siteId');
         if (response.statusCode == 200) {
           final List<dynamic> data = response.data;
           allLocations.addAll(data.map((e) => Location.fromJson(e)).toList());
         }
       } catch (e) {
-        print('Error fetching locations for $siteId: $e');
+        debugPrint('Error fetching locations for $siteId: $e');
         // Continue to next site even if one fails
       }
     }

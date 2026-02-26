@@ -23,10 +23,9 @@ class CheckInPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => CheckInBloc(
-        isCheckoutMode: isCheckoutMode,
-        checkedInAt: checkedInAt,
-      )..add(const CheckInStarted()),
+      create: (_) =>
+          CheckInBloc(isCheckoutMode: isCheckoutMode, checkedInAt: checkedInAt)
+            ..add(const CheckInStarted()),
       child: const _CheckInView(),
     );
   }
@@ -54,16 +53,23 @@ class _CheckInView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocListener<CheckInBloc, CheckInState>(
       listenWhen: (p, c) {
-        if (c.successMessage != null && p.successMessage != c.successMessage) return true;
-        if (c.errorMessage != null && p.errorMessage != c.errorMessage) return true;
+        if (c.successMessage != null && p.successMessage != c.successMessage) {
+          return true;
+        }
+        if (c.errorMessage != null && p.errorMessage != c.errorMessage) {
+          return true;
+        }
         return false;
       },
       listener: (context, state) async {
         if (state.successMessage != null) {
           await _showSuccessDialog(context, state.successMessage!);
+          if (!context.mounted) return;
           Navigator.of(context).pop(
             CheckInResult(
-              action: state.isCheckoutMode ? CheckAction.checkOut : CheckAction.checkIn,
+              action: state.isCheckoutMode
+                  ? CheckAction.checkOut
+                  : CheckAction.checkIn,
               timestamp: state.actionTimestamp!,
             ),
           );
@@ -96,7 +102,9 @@ class _CheckInView extends StatelessWidget {
                   left: 18,
                   right: 18,
                   top: 16,
-                  bottom: MediaQuery.of(context).padding.bottom + 90, // leave space for sticky btn
+                  bottom:
+                      MediaQuery.of(context).padding.bottom +
+                      90, // leave space for sticky btn
                 ),
                 children: [
                   const CheckInMapPanel(),
@@ -106,7 +114,8 @@ class _CheckInView extends StatelessWidget {
 
                   BlocBuilder<CheckInBloc, CheckInState>(
                     buildWhen: (p, c) =>
-                        p.warning != c.warning || p.isCheckoutMode != c.isCheckoutMode,
+                        p.warning != c.warning ||
+                        p.isCheckoutMode != c.isCheckoutMode,
                     builder: (_, state) {
                       return Text(
                         state.warning,
@@ -122,7 +131,9 @@ class _CheckInView extends StatelessWidget {
                   const SizedBox(height: 14),
 
                   BlocBuilder<CheckInBloc, CheckInState>(
-                    buildWhen: (p, c) => p.options != c.options || p.selectedShiftId != c.selectedShiftId,
+                    buildWhen: (p, c) =>
+                        p.options != c.options ||
+                        p.selectedShiftId != c.selectedShiftId,
                     builder: (_, state) {
                       return Column(
                         children: [

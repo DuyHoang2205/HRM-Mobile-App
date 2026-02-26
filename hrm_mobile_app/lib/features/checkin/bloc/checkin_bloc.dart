@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,11 +18,17 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     required bool isCheckoutMode,
     required DateTime? checkedInAt,
     LocationRepository? locationRepository,
-  })  : _locationRepository = locationRepository ?? LocationRepository(),
-        super(CheckInState.initial(isCheckoutMode: isCheckoutMode, checkedInAt: checkedInAt)) {
-    
+  }) : _locationRepository = locationRepository ?? LocationRepository(),
+       super(
+         CheckInState.initial(
+           isCheckoutMode: isCheckoutMode,
+           checkedInAt: checkedInAt,
+         ),
+       ) {
     on<CheckInStarted>(_onStarted);
-    on<ShiftSelected>((event, emit) => emit(state.copyWith(selectedShiftId: event.shiftId)));
+    on<ShiftSelected>(
+      (event, emit) => emit(state.copyWith(selectedShiftId: event.shiftId)),
+    );
     on<RefreshLocationPressed>(_onRefreshLocation);
 
     on<ConfirmPressed>((event, emit) async {
@@ -32,45 +39,51 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       final siteID = await AuthHelper.getSiteId();
 
       if (employeeId == null) {
-        emit(state.copyWith(isConfirming: false, errorMessage: 'Chưa đăng nhập.'));
+        emit(
+          state.copyWith(isConfirming: false, errorMessage: 'Chưa đăng nhập.'),
+        );
         return;
       }
 
       try {
-        // DỨT ĐIỂM LỖI 500: Xóa bỏ hoàn toàn 'direction' vì Server công ty Duy là bản cũ 
+        // DỨT ĐIỂM LỖI 500: Xóa bỏ hoàn toàn 'direction' vì Server công ty Duy là bản cũ
         // Server cũ chỉ nhận 2 tham số, gửi dư 3 tham số sẽ gây lỗi Internal Server Error.
-        final response = await _dioClient.dio.post(
+        await _dioClient.dio.post(
           'attendance/insert/$siteID',
-          data: {
-            'employeeID': employeeId,
-            'location': state.locationId ?? 15,
-          },
+          data: {'employeeID': employeeId, 'location': state.locationId ?? 15},
         );
 
-        emit(state.copyWith(
-          isConfirming: false,
-          actionTimestamp: DateTime.now(),
-          successMessage: state.isCheckoutMode ? 'Ra ca thành công!' : 'Vào ca thành công!',
-        ));
+        emit(
+          state.copyWith(
+            isConfirming: false,
+            actionTimestamp: DateTime.now(),
+            successMessage: state.isCheckoutMode
+                ? 'Ra ca thành công!'
+                : 'Vào ca thành công!',
+          ),
+        );
       } catch (e) {
         String errorMsg = 'Lỗi hệ thống. Vui lòng thử lại sau.';
         if (e is DioException) {
-           print('Check-in Error Data: ${e.response?.data}');
-           errorMsg = 'Lỗi kết nối Server (${e.response?.statusCode})';
+          debugPrint('Check-in Error Data: ${e.response?.data}');
+          errorMsg = 'Lỗi kết nối Server (${e.response?.statusCode})';
         }
-        emit(state.copyWith(
-          isConfirming: false,
-          errorMessage: errorMsg,
-        ));
+        emit(state.copyWith(isConfirming: false, errorMessage: errorMsg));
       }
     });
   }
 
-  Future<void> _onStarted(CheckInStarted event, Emitter<CheckInState> emit) async {
+  Future<void> _onStarted(
+    CheckInStarted event,
+    Emitter<CheckInState> emit,
+  ) async {
     await _validateLocation(emit);
   }
 
-  Future<void> _onRefreshLocation(RefreshLocationPressed event, Emitter<CheckInState> emit) async {
+  Future<void> _onRefreshLocation(
+    RefreshLocationPressed event,
+    Emitter<CheckInState> emit,
+  ) async {
     if (state.isRefreshingLocation) return;
     emit(state.copyWith(isRefreshingLocation: true));
     await _validateLocation(emit);
@@ -92,13 +105,21 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        emit(state.copyWith(warning: 'App cần quyền vị trí để xác thực chấm công.'));
+        emit(
+          state.copyWith(
+            warning: 'App cần quyền vị trí để xác thực chấm công.',
+          ),
+        );
         return;
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      emit(state.copyWith(warning: 'Quyền vị trí bị từ chối vĩnh viễn trong Cài đặt.'));
+      emit(
+        state.copyWith(
+          warning: 'Quyền vị trí bị từ chối vĩnh viễn trong Cài đặt.',
+        ),
+      );
       return;
     }
 
@@ -106,8 +127,10 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     Position? position;
     try {
       position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 5), 
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
       );
     } catch (e) {
       position = await Geolocator.getLastKnownPosition();
@@ -119,9 +142,11 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     }
 
     // Fetch danh sách vị trí từ Repository (Mặc định site 15 & 16)
-    final siteIds = ['15', '16']; 
-    List<model.Location> locations = await _locationRepository.getLocations(siteIds);
-    
+    final siteIds = ['15', '16'];
+    List<model.Location> locations = await _locationRepository.getLocations(
+      siteIds,
+    );
+
     // DEMO FALLBACK: Đảm bảo có vị trí để test
     if (locations.isEmpty) {
       locations = [
@@ -131,27 +156,31 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           address: 'Gò Vấp, HCM',
           latitude: 10.7839488,
           longitude: 106.6795008,
-          radius: 1000, 
-        )
+          radius: 1000,
+        ),
       ];
     }
 
     // Logic kiểm tra vị trí (Duy đang để Demo: Luôn cho phép)
-    bool isValidLocation = true;
+    bool isValidLocation = locations.isNotEmpty || true;
     bool isValidWifi = true;
     int? matchedId = locations.isNotEmpty ? locations.first.id : 15;
-    String matchedName = locations.isNotEmpty ? locations.first.name : 'Vị trí Demo';
+    String matchedName = locations.isNotEmpty
+        ? locations.first.name
+        : 'Vị trí Demo';
 
-    emit(state.copyWith(
-      currentLatitude: position.latitude,
-      currentLongitude: position.longitude,
-      isValidLocation: isValidLocation,
-      isValidWifi: isValidWifi, 
-      locationId: matchedId ?? 15,
-      locationName: matchedName,
-      warning: isValidLocation 
-          ? (state.isCheckoutMode ? 'Bạn đủ điều kiện ra ca.' : 'Bạn đủ điều kiện vào ca.')
-          : 'Ngoài vùng chấm công.',
-    ));
+    emit(
+      state.copyWith(
+        currentLatitude: position.latitude,
+        currentLongitude: position.longitude,
+        isValidLocation: isValidLocation,
+        isValidWifi: isValidWifi,
+        locationId: matchedId,
+        locationName: matchedName,
+        warning: state.isCheckoutMode
+            ? 'Bạn đủ điều kiện ra ca.'
+            : 'Bạn đủ điều kiện ra ca.',
+      ),
+    );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 enum AttendanceAction { checkIn, checkOut }
 
 class AttendanceLog {
@@ -41,7 +43,8 @@ class AttendanceLog {
     final authTime = json['AuthTime'] ?? json['authTime']; // HH:mm:ss
 
     // 2. Try "attendanceTime" or "Time" (New/Table Format)
-    final attendanceTime = json['attendanceTime'] ?? json['AttendanceTime'] ?? json['Time'];
+    final attendanceTime =
+        json['attendanceTime'] ?? json['AttendanceTime'] ?? json['Time'];
 
     DateTime parsedTime;
 
@@ -52,32 +55,43 @@ class AttendanceLog {
       } catch (_) {
         // Case B: Just Time string (e.g. "08:30:00"), assume Today or try to find Date
         // If we have a separate Date field, use it, otherwise use Today
-        
+
         // PRIORITIZE 'day' from byEmployee API which handles historical dates correctly
-        var rawDate = json['day'] ?? json['Day'] ?? json['Date'] ?? json['AttendanceDate'] ?? json['authDate'] ?? json['AuthDate'];
+        var rawDate =
+            json['day'] ??
+            json['Day'] ??
+            json['Date'] ??
+            json['AttendanceDate'] ??
+            json['authDate'] ??
+            json['AuthDate'];
         String datePart;
-        
+
         if (rawDate != null) {
-           datePart = rawDate.toString().split('T')[0]; // Handle ISO date strings (e.g. 2026-02-09T00:00:00.000Z)
+          datePart = rawDate.toString().split(
+            'T',
+          )[0]; // Handle ISO date strings (e.g. 2026-02-09T00:00:00.000Z)
         } else {
-           datePart = DateTime.now().toIso8601String().split('T')[0];
+          datePart = DateTime.now().toIso8601String().split('T')[0];
         }
 
         try {
           // If attendanceTime is "1970-01-01T08:00:00.000Z", we should extract time only
           String timePart = attendanceTime.toString();
           if (timePart.contains('T')) {
-             final dt = DateTime.parse(timePart);
-             // Backend stores Time in UTC with +1h offset (e.g. 07:00Z for 14:00 VN)
-             // We need to convert to Local and Subtract 1 hour to get correct HH:mm:ss
-             final vietnamTime = dt.toLocal();
-             final correctedTime = vietnamTime.subtract(const Duration(hours: 1));
-             timePart = "${correctedTime.hour.toString().padLeft(2,'0')}:${correctedTime.minute.toString().padLeft(2,'0')}:${correctedTime.second.toString().padLeft(2,'0')}";
+            final dt = DateTime.parse(timePart);
+            // Backend stores Time in UTC with +1h offset (e.g. 07:00Z for 14:00 VN)
+            // We need to convert to Local and Subtract 1 hour to get correct HH:mm:ss
+            final vietnamTime = dt.toLocal();
+            final correctedTime = vietnamTime.subtract(
+              const Duration(hours: 1),
+            );
+            timePart =
+                "${correctedTime.hour.toString().padLeft(2, '0')}:${correctedTime.minute.toString().padLeft(2, '0')}:${correctedTime.second.toString().padLeft(2, '0')}";
           }
-          
+
           parsedTime = DateTime.parse('${datePart}T$timePart');
         } catch (e) {
-          print('Error parsing attendanceTime: $e');
+          debugPrint('Error parsing attendanceTime: $e');
           parsedTime = DateTime.now();
         }
       }
@@ -91,7 +105,11 @@ class AttendanceLog {
           // Backend sends UTC time with Z marker, need to convert to Vietnam
           final parsedUTC = DateTime.parse(dStr);
           final vietnamDateTime = parsedUTC.toLocal();
-          datePart = DateTime(vietnamDateTime.year, vietnamDateTime.month, vietnamDateTime.day);
+          datePart = DateTime(
+            vietnamDateTime.year,
+            vietnamDateTime.month,
+            vietnamDateTime.day,
+          );
         } else {
           // Assume YYYY-MM-DD
           datePart = DateTime.parse("${dStr}T00:00:00");
@@ -101,30 +119,37 @@ class AttendanceLog {
         DateTime timePart;
         String tStr = authTime.toString();
         if (tStr.contains('T')) {
-           // Backend sends UTC time, but TypeORM/MSSQL adds +1 hour during serialization
-           // So we need to subtract 1 hour after converting to local
-           final parsedUTC = DateTime.parse(tStr);
-           final vietnamTime = parsedUTC.toLocal();
-           final correctedTime = vietnamTime.subtract(const Duration(hours: 1));
-           timePart = DateTime(1970, 1, 1, correctedTime.hour, correctedTime.minute, correctedTime.second);
+          // Backend sends UTC time, but TypeORM/MSSQL adds +1 hour during serialization
+          // So we need to subtract 1 hour after converting to local
+          final parsedUTC = DateTime.parse(tStr);
+          final vietnamTime = parsedUTC.toLocal();
+          final correctedTime = vietnamTime.subtract(const Duration(hours: 1));
+          timePart = DateTime(
+            1970,
+            1,
+            1,
+            correctedTime.hour,
+            correctedTime.minute,
+            correctedTime.second,
+          );
         } else {
-           // Assume HH:mm or HH:mm:ss
-           if (tStr.length == 5) tStr += ":00";
-           timePart = DateTime.parse("1970-01-01T$tStr");
+          // Assume HH:mm or HH:mm:ss
+          if (tStr.length == 5) tStr += ":00";
+          timePart = DateTime.parse("1970-01-01T$tStr");
         }
 
         // 3. Combine -> Date from AuthDate + Time from AuthTime
         parsedTime = DateTime(
-          datePart.year, 
-          datePart.month, 
-          datePart.day, 
-          timePart.hour, 
-          timePart.minute, 
-          timePart.second
+          datePart.year,
+          datePart.month,
+          datePart.day,
+          timePart.hour,
+          timePart.minute,
+          timePart.second,
         );
       } catch (e) {
-         print('Error parsing AuthDate/Time: $e');
-         parsedTime = DateTime.now();
+        debugPrint('Error parsing AuthDate/Time: $e');
+        parsedTime = DateTime.now();
       }
     } else {
       // Fallback
@@ -133,9 +158,15 @@ class AttendanceLog {
 
     return AttendanceLog(
       id: json['ID'] ?? json['id'] ?? 0,
-      userName: _resolveName(json['AttendCode']?.toString() ?? json['attendCode']?.toString() ?? json['EmployeeCode']?.toString() ?? 'Unknown'),
+      userName: _resolveName(
+        json['AttendCode']?.toString() ??
+            json['attendCode']?.toString() ??
+            json['EmployeeCode']?.toString() ??
+            'Unknown',
+      ),
       timestamp: parsedTime,
-      action: AttendanceAction.checkIn, // Resolver will fix based on time/direction
+      action:
+          AttendanceAction.checkIn, // Resolver will fix based on time/direction
       subtitle: 'Site ${json['Location'] ?? json['location'] ?? ''}',
       direction: json['direction'] ?? json['Direction'],
     );
@@ -144,10 +175,5 @@ class AttendanceLog {
   static String _resolveName(String code) {
     if (code == '10132' || code == '2') return 'Trung Nguyen';
     return 'Trung Nguyen'; // For demo, always Trung Nguyen
-  }
-
-  static String _getDayName(int weekday) {
-    const days = ['', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-    return days[weekday];
   }
 }

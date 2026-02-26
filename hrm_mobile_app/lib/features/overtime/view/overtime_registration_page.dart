@@ -293,7 +293,7 @@ class _RegistrationViewState extends State<_RegistrationView> {
                       vertical: 14,
                     ),
                   ),
-                  value: _selectedReason,
+                  initialValue: _selectedReason,
                   hint: const Text('Chọn lý do'),
                   items: OvertimeReason.values
                       .map(
@@ -435,7 +435,7 @@ class _RegistrationViewState extends State<_RegistrationView> {
                       vertical: 14,
                     ),
                   ),
-                  value: _selectedReeproDispatch,
+                  initialValue: _selectedReeproDispatch,
                   hint: const Text('Lựa chọn'),
                   items: _dispatchOptions
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
@@ -469,7 +469,7 @@ class _RegistrationViewState extends State<_RegistrationView> {
                       vertical: 14,
                     ),
                   ),
-                  value: _selectedReeproProject,
+                  initialValue: _selectedReeproProject,
                   hint: const Text('Lựa chọn'),
                   items: _projectOptions
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../core/auth/auth_helper.dart';
 
@@ -23,14 +24,14 @@ class DioClient {
       },
       onError: (DioException error, ErrorInterceptorHandler handler) async {
         if (error.response?.statusCode == 401) {
-          print('--- DETECTED 401 ERROR ---');
+          debugPrint('--- DETECTED 401 ERROR ---');
           final refreshToken = await AuthHelper.getRefreshToken();
           final accessToken = await AuthHelper.getAccessToken();
-          print('--- Refresh Token Available: ${refreshToken != null} ---');
+          debugPrint('--- Refresh Token Available: ${refreshToken != null} ---');
 
           if (refreshToken != null) {
             try {
-              print('--- ATTEMPTING REFRESH ---');
+              debugPrint('--- ATTEMPTING REFRESH ---');
               // Call refresh endpoint
               // We use a separate Dio instance to avoid circular dependency/interceptor issues
               final refreshDio = Dio(BaseOptions(baseUrl: dio.options.baseUrl));
@@ -40,12 +41,12 @@ class DioClient {
                 'refreshToken': refreshToken,
               });
               
-              print('--- REFRESH RESPONSE STATUS: ${response.statusCode} ---');
+              debugPrint('--- REFRESH RESPONSE STATUS: ${response.statusCode} ---');
 
               if (response.statusCode == 200 || response.statusCode == 201) {
                 final newAccessToken = response.data['accessToken'];
                 final newRefreshToken = response.data['refreshToken'];
-                print('--- REFRESH SUCCESS ---');
+                debugPrint('--- REFRESH SUCCESS ---');
 
                 // Save new tokens
                 await AuthHelper.saveTokenAndUser(newAccessToken);
@@ -59,15 +60,15 @@ class DioClient {
                 final retryResponse = await dio.fetch(options);
                 return handler.resolve(retryResponse);
               } else {
-                print('--- REFRESH FAILED: Status ${response.statusCode} ---');
+                debugPrint('--- REFRESH FAILED: Status ${response.statusCode} ---');
               }
             } catch (e) {
-              print('--- REFRESH EXCEPTION: $e ---');
+              debugPrint('--- REFRESH EXCEPTION: $e ---');
               // Refresh failed
               return handler.next(error);
             }
           } else {
-             print('--- NO REFRESH TOKEN FOUND ---');
+             debugPrint('--- NO REFRESH TOKEN FOUND ---');
           }
         }
         return handler.next(error);

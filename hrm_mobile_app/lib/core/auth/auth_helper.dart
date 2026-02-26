@@ -2,10 +2,6 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Keys for stored auth data.
-const String _kAccessToken = 'access_token';
-const String _kRefreshToken = 'refresh_token';
-const String _kEmployeeId = 'employee_id';
-const String _kSiteId = 'site_id';
 
 /// Decodes JWT payload (middle part) and returns payload map.
 /// Returns null if token is invalid or missing.
@@ -88,7 +84,9 @@ class AuthHelper {
       final employeeId = payload['employeeId'];
       if (employeeId != null) {
         // Handle both string and int cases safely by saving as string
-        final id = employeeId is int ? employeeId : int.tryParse(employeeId.toString()) ?? 0;
+        final id = employeeId is int
+            ? employeeId
+            : int.tryParse(employeeId.toString()) ?? 0;
         await _storage.write(key: _kEmployeeId, value: id.toString());
       }
       final site = payload['site'];
@@ -121,15 +119,15 @@ class AuthHelper {
     final value = await _storage.read(key: _kSiteId);
     return value ?? 'MOBILE_APP';
   }
-  
+
   static Future<String?> getStaffCode() async {
     return await _storage.read(key: _kStaffCode);
   }
-  
+
   static Future<String?> getFullName() async {
     return await _storage.read(key: _kFullName);
   }
-  
+
   static Future<String?> getAccessToken() async {
     return await _storage.read(key: _kAccessToken);
   }

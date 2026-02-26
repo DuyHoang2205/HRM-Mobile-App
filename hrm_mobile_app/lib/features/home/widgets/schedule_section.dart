@@ -130,7 +130,7 @@ class _StaticDateChip extends StatelessWidget {
     // Preserving your exact original colors and decoration
     final bg = highlight ? const Color(0xFF5B84A8) : Colors.white;
     final dowColor = highlight
-        ? Colors.white.withOpacity(0.9)
+        ? Colors.white.withValues(alpha: 0.9)
         : const Color(0xFF9AA6B2);
     final dayColor = highlight ? Colors.white : const Color(0xFF0B1B2B);
     final dotColor = highlight ? Colors.white : const Color(0xFFD7DFE8);
@@ -146,7 +146,7 @@ class _StaticDateChip extends StatelessWidget {
             ? []
             : [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 )

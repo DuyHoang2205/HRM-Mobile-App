@@ -28,9 +28,10 @@ class _AttendanceView extends StatefulWidget {
   State<_AttendanceView> createState() => _AttendanceViewState();
 }
 
-class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProviderStateMixin {
+class _AttendanceViewState extends State<_AttendanceView>
+    with SingleTickerProviderStateMixin {
   late final TabController _tab;
-  CheckInResult? _lastResult; 
+  CheckInResult? _lastResult;
 
   @override
   void initState() {
@@ -52,7 +53,10 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0B1B2B),
+          ),
           onPressed: () => Navigator.of(context).pop(_lastResult),
         ),
         titleSpacing: 0,
@@ -66,18 +70,22 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
               final result = await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CheckInPage(
-                    isCheckoutMode: isCheckedIn, 
-                    checkedInAt: isCheckedIn ? currentState.logs.first.timestamp : null,
+                    isCheckoutMode: isCheckedIn,
+                    checkedInAt: isCheckedIn
+                        ? currentState.logs.first.timestamp
+                        : null,
                   ),
                 ),
               );
-              
-              if (mounted && result is CheckInResult) {
-                 _lastResult = result; 
-                 context.read<AttendanceBloc>().add(AttendanceCheckResultArrived(
-                   isCheckIn: result.action == CheckAction.checkIn,
-                   timestamp: result.timestamp,
-                 ));
+              if (!context.mounted) return;
+              if (result is CheckInResult) {
+                _lastResult = result;
+                context.read<AttendanceBloc>().add(
+                  AttendanceCheckResultArrived(
+                    isCheckIn: result.action == CheckAction.checkIn,
+                    timestamp: result.timestamp,
+                  ),
+                );
               }
             },
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B)),
@@ -93,9 +101,18 @@ class _AttendanceViewState extends State<_AttendanceView> with SingleTickerProvi
                 indicatorWeight: 3,
                 labelColor: const Color(0xFF00C389),
                 unselectedLabelColor: const Color(0xFF9AA6B2),
-                labelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                unselectedLabelStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                tabs: const [Tab(text: 'Vào/Ra'), Tab(text: 'Bảng công')],
+                labelStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+                tabs: const [
+                  Tab(text: 'Vào/Ra'),
+                  Tab(text: 'Bảng công'),
+                ],
               ),
               const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
             ],
@@ -120,7 +137,11 @@ class _AttendanceTitle extends StatelessWidget {
       children: [
         const Text(
           'Chấm công',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0B1B2B)),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF0B1B2B),
+          ),
         ),
         const SizedBox(height: 2),
         BlocBuilder<AttendanceBloc, AttendanceState>(
@@ -138,18 +159,31 @@ class _AttendanceTitle extends StatelessWidget {
                   lastDate: DateTime(2030),
                   locale: const Locale('vi', 'VN'),
                 );
+                if (!context.mounted) return;
                 if (picked != null) {
-                  context.read<AttendanceBloc>().add(AttendanceFilterChanged(
-                    start: picked.start,
-                    end: picked.end,
-                  ));
+                  context.read<AttendanceBloc>().add(
+                    AttendanceFilterChanged(
+                      start: picked.start,
+                      end: picked.end,
+                    ),
+                  );
                 }
               },
               child: Row(
                 children: [
-                  Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF9AA6B2))),
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF9AA6B2),
+                    ),
+                  ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF9AA6B2)),
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF9AA6B2),
+                  ),
                 ],
               ),
             );
@@ -159,7 +193,8 @@ class _AttendanceTitle extends StatelessWidget {
     );
   }
 
-  String _fmt(DateTime d) => '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
+  String _fmt(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
 }
 
 class _TabLogs extends StatefulWidget {
@@ -180,7 +215,9 @@ class _TabLogsState extends State<_TabLogs> {
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
-        if (state.logs.isEmpty) return const Center(child: Text('Chưa có dữ liệu'));
+        if (state.logs.isEmpty) {
+          return const Center(child: Text('Chưa có dữ liệu'));
+        }
 
         final Map<String, List<AttendanceLog>> grouped = {};
         for (var log in state.logs) {
@@ -189,7 +226,8 @@ class _TabLogsState extends State<_TabLogs> {
           grouped[key]!.add(log);
         }
 
-        final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+        final sortedKeys = grouped.keys.toList()
+          ..sort((a, b) => b.compareTo(a));
 
         return ListView.builder(
           padding: const EdgeInsets.all(18),
@@ -200,9 +238,21 @@ class _TabLogsState extends State<_TabLogs> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_dateHeader(dateKey), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF9AA6B2))),
+                Text(
+                  _dateHeader(dateKey),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF9AA6B2),
+                  ),
+                ),
                 const SizedBox(height: 10),
-                ...logs.map((log) => Padding(padding: const EdgeInsets.only(bottom: 14), child: _LogItem(log: log))),
+                ...logs.map(
+                  (log) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: _LogItem(log: log),
+                  ),
+                ),
               ],
             );
           },
@@ -227,28 +277,51 @@ class _LogItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIn = log.action == AttendanceAction.checkIn;
     final subtitle = isIn ? 'Vào ca trên điện thoại' : 'Ra ca trên điện thoại';
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: [
           Container(
-            width: 52, height: 52,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               // Blue for CheckIn, Red for CheckOut
-              color: isIn ? const Color(0xFF4F8DFD) : const Color(0xFFE53935), 
-              borderRadius: BorderRadius.circular(14)
+              color: isIn ? const Color(0xFF4F8DFD) : const Color(0xFFE53935),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.phone_iphone_rounded, color: Colors.white),
           ),
           const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(log.userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            Text(subtitle, style: const TextStyle(fontSize: 15, color: Color(0xFF9AA6B2))),
-          ])),
-          Text('${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}', 
-               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  log.userName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF9AA6B2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}',
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+          ),
         ],
       ),
     );
@@ -262,7 +335,9 @@ class _TabBangCong extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
-        if (state.logs.isEmpty) return const Center(child: Text('Chưa có dữ liệu cho Bảng công'));
+        if (state.logs.isEmpty) {
+          return const Center(child: Text('Chưa có dữ liệu cho Bảng công'));
+        }
 
         // Grouping logs by date for Bảng công
         final Map<String, List<AttendanceLog>> dailyLogs = {};
@@ -271,7 +346,8 @@ class _TabBangCong extends StatelessWidget {
           dailyLogs.putIfAbsent(key, () => []).add(log);
         }
 
-        final sortedDates = dailyLogs.keys.toList()..sort((a, b) => b.compareTo(a));
+        final sortedDates = dailyLogs.keys.toList()
+          ..sort((a, b) => b.compareTo(a));
 
         return ListView.builder(
           padding: const EdgeInsets.only(top: 8),
@@ -279,15 +355,19 @@ class _TabBangCong extends StatelessWidget {
           itemBuilder: (context, index) {
             final dateStr = sortedDates[index];
             final logs = dailyLogs[dateStr]!;
-            
-            final formattedDate = DateFormat('dd/MM/yyyy').format(DateTime.parse(dateStr));
+
+            final formattedDate = DateFormat(
+              'dd/MM/yyyy',
+            ).format(DateTime.parse(dateStr));
             final totalLogs = logs.length;
-            
+
             return _BangCongTile(
               label: formattedDate,
               value: '$totalLogs lần',
               // Visual cue: Red text if there is an odd number of logs (likely missed a checkout)
-              valueColor: totalLogs % 2 != 0 ? const Color(0xFFFF3B30) : const Color(0xFF00C389),
+              valueColor: totalLogs % 2 != 0
+                  ? const Color(0xFFFF3B30)
+                  : const Color(0xFF00C389),
             );
           },
         );
@@ -317,11 +397,19 @@ class _BangCongTile extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: 18),
             title: Text(
               label,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF5D6B78)),
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF5D6B78),
+              ),
             ),
             trailing: Text(
               value,
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: valueColor ?? const Color(0xFF0B1B2B)),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: valueColor ?? const Color(0xFF0B1B2B),
+              ),
             ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0x11000000)),

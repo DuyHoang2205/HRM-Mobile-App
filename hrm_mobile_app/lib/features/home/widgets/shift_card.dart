@@ -68,7 +68,7 @@ class _ShiftCardState extends State<ShiftCard> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: shadowColor.withOpacity(0.35),
+                      color: shadowColor.withValues(alpha: 0.35),
                       blurRadius: 18,
                       offset: const Offset(0, 8),
                     ),
@@ -96,7 +96,7 @@ class _ShiftCardState extends State<ShiftCard> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                         ],
@@ -111,7 +111,7 @@ class _ShiftCardState extends State<ShiftCard> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 12,
                             offset: const Offset(0, 6),
                           ),

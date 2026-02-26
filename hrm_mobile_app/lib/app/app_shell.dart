@@ -32,7 +32,7 @@ class _AppShellState extends State<AppShell> {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'PlusMenu',
-      barrierColor: Colors.black.withOpacity(0.35),
+      barrierColor: Colors.black.withValues(alpha: 0.35),
       transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (_, _, _) => _PlusMenuOverlay(screenSize: size),
       transitionBuilder: (_, animation, _, child) {
@@ -247,7 +247,7 @@ class _PlusMenuOverlay extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),

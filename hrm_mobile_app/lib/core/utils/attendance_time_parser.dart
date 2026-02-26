@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 class AttendanceTimeParser {
   static DateTime parseDateTime({
     required dynamic date,
@@ -16,10 +17,10 @@ class AttendanceTimeParser {
       // when it is actually 14:05 in Vietnam.
       DateTime shifted = parsed.add(const Duration(hours: 14));
 
-      print('--- TIMEZONE DEBUG ---');
-      print('RAW FROM SERVER: $dateStr');
-      print('FIXED RESULT (+14h): $shifted');
-      print('----------------------');
+      debugPrint('--- TIMEZONE DEBUG ---');
+      debugPrint('RAW FROM SERVER: $dateStr');
+      debugPrint('FIXED RESULT (+14h): $shifted');
+      debugPrint('----------------------');
       
       return shifted; 
     }
