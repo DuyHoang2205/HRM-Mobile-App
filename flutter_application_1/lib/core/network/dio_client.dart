@@ -7,6 +7,7 @@ class DioClient {
   DioClient() {
     dio = Dio(BaseOptions(
       baseUrl: 'http://vpn.dptsolution.net:853/hrm/api/',
+      // baseUrl: 'http://103.3.247.52:853/hrm/api/',
       validateStatus: (status) => status! < 500,
       contentType: 'application/json; charset=utf-8',
     ));
@@ -16,7 +17,6 @@ class DioClient {
         final token = await AuthHelper.getAccessToken();
         
         if (token != null) {
-          // Attach token to pass JwtAuthGuard
           options.headers['Authorization'] = 'Bearer $token'; 
         }
         return handler.next(options);

@@ -69,10 +69,8 @@ class AttendanceLog {
           if (timePart.contains('T')) {
              final dt = DateTime.parse(timePart);
              // Backend stores Time in UTC with +1h offset (e.g. 07:00Z for 14:00 VN)
-             // We need to convert to Local and Subtract 1 hour to get correct HH:mm:ss
-             final vietnamTime = dt.toLocal();
-             final correctedTime = vietnamTime.subtract(const Duration(hours: 1));
-             timePart = "${correctedTime.hour.toString().padLeft(2,'0')}:${correctedTime.minute.toString().padLeft(2,'0')}:${correctedTime.second.toString().padLeft(2,'0')}";
+             final vietnamTime = dt.toUtc().add(const Duration(hours: 7));
+             timePart = "${vietnamTime.hour.toString().padLeft(2,'0')}:${vietnamTime.minute.toString().padLeft(2,'0')}:${vietnamTime.second.toString().padLeft(2,'0')}";
           }
           
           parsedTime = DateTime.parse('${datePart}T$timePart');
@@ -90,7 +88,7 @@ class AttendanceLog {
         if (dStr.contains('T')) {
           // Backend sends UTC time with Z marker, need to convert to Vietnam
           final parsedUTC = DateTime.parse(dStr);
-          final vietnamDateTime = parsedUTC.toLocal();
+          final vietnamDateTime = parsedUTC.toUtc().add(const Duration(hours: 7));
           datePart = DateTime(vietnamDateTime.year, vietnamDateTime.month, vietnamDateTime.day);
         } else {
           // Assume YYYY-MM-DD
@@ -102,11 +100,10 @@ class AttendanceLog {
         String tStr = authTime.toString();
         if (tStr.contains('T')) {
            // Backend sends UTC time, but TypeORM/MSSQL adds +1 hour during serialization
-           // So we need to subtract 1 hour after converting to local
+           // So we explicitly convert to UTC and add 7 hours for Vietnam Time
            final parsedUTC = DateTime.parse(tStr);
-           final vietnamTime = parsedUTC.toLocal();
-           final correctedTime = vietnamTime.subtract(const Duration(hours: 1));
-           timePart = DateTime(1970, 1, 1, correctedTime.hour, correctedTime.minute, correctedTime.second);
+           final vietnamTime = parsedUTC.toUtc().add(const Duration(hours: 7));
+           timePart = DateTime(1970, 1, 1, vietnamTime.hour, vietnamTime.minute, vietnamTime.second);
         } else {
            // Assume HH:mm or HH:mm:ss
            if (tStr.length == 5) tStr += ":00";
