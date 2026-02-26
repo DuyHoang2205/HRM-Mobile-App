@@ -182,7 +182,7 @@ class _RegistrationViewState extends State<_RegistrationView> {
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
-                  value: _selectedReason,
+                  initialValue: _selectedReason,
                   items: _reasons.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (v) => setState(() => _selectedReason = v),
                   validator: (v) => v == null ? 'Vui lòng chọn lý do' : null,
@@ -237,7 +237,7 @@ class _RegistrationViewState extends State<_RegistrationView> {
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
-                  value: _selectedReeProMobilization,
+                  initialValue: _selectedReeProMobilization,
                   items: const [DropdownMenuItem(value: 'Option 1', child: Text('Option 1'))], // Placeholder
                   onChanged: (v) => setState(() => _selectedReeProMobilization = v),
                 ),
@@ -249,7 +249,7 @@ class _RegistrationViewState extends State<_RegistrationView> {
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
-                  value: _selectedReeProProject,
+                  initialValue: _selectedReeProProject,
                   items: const [DropdownMenuItem(value: 'Project A', child: Text('Project A'))], // Placeholder
                   onChanged: (v) => setState(() => _selectedReeProProject = v),
                 ),
@@ -281,8 +281,8 @@ class _RegistrationViewState extends State<_RegistrationView> {
                       backgroundColor: const Color(0xFFCACFD6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ).copyWith(
-                      backgroundColor: MaterialStateProperty.resolveWith((states) {
-                         if (states.contains(MaterialState.disabled)) return const Color(0xFFCACFD6);
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                         if (states.contains(WidgetState.disabled)) return const Color(0xFFCACFD6);
                          return const Color(0xFF00C389);
                       }), 
                     ),
@@ -336,8 +336,11 @@ class _RegistrationViewState extends State<_RegistrationView> {
     );
     if (picked != null) {
       setState(() {
-        if (isStart) _startTime = picked;
-        else _endTime = picked;
+        if (isStart) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
       });
     }
   }

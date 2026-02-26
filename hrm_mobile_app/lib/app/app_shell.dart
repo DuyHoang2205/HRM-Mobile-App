@@ -33,8 +33,8 @@ Future<void> _openPlusMenu() async {
     barrierLabel: 'PlusMenu',
     barrierColor: Colors.black.withOpacity(0.35),
     transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (_, __, ___) => _PlusMenuOverlay(screenSize: size),
-    transitionBuilder: (_, animation, __, child) {
+    pageBuilder: (_, _, _) => _PlusMenuOverlay(screenSize: size),
+    transitionBuilder: (_, animation, _, child) {
       return Transform.scale(
         scale: Curves.easeOutBack.transform(animation.value),
         child: Opacity(opacity: animation.value, child: child),

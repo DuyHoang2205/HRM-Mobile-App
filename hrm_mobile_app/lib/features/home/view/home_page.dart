@@ -9,7 +9,6 @@ import '../widgets/shift_card.dart';
 import '../../checkin/view/checkin_page.dart';
 import '../../checkin/models/checkin_result.dart';
 import '../widgets/folder_section.dart';
-import '../models/folder_item.dart';
 import '../../attendance/view/attendance_page.dart';
 import '../../overtime/view/overtime_list_page.dart';
 import '../../leave/view/leave_list_page.dart';

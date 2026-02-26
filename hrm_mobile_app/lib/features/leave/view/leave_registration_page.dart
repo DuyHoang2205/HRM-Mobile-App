@@ -127,7 +127,7 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   ),
-                  value: _selectedReason,
+                  initialValue: _selectedReason,
                   isExpanded: true,
                   items: _reasons.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
                   onChanged: (v) => setState(() => _selectedReason = v),
@@ -246,8 +246,8 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                       backgroundColor: const Color(0xFFCACFD6),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ).copyWith(
-                      backgroundColor: MaterialStateProperty.resolveWith((states) {
-                         if (states.contains(MaterialState.disabled)) return const Color(0xFFCACFD6);
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                         if (states.contains(WidgetState.disabled)) return const Color(0xFFCACFD6);
                          return const Color(0xFF00C389);
                       }), 
                     ),
@@ -302,8 +302,11 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
     );
     if (picked != null) {
       setState(() {
-        if (isStart) _startDate = picked;
-        else _endDate = picked;
+        if (isStart) {
+          _startDate = picked;
+        } else {
+          _endDate = picked;
+        }
       });
     }
   }
