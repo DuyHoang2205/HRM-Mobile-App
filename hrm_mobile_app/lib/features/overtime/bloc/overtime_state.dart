@@ -1,33 +1,35 @@
-import '../models/overtime_request.dart';
+import '../models/overtime_model.dart';
+
+enum OvertimeStatus {
+  initial,
+  loading,
+  success,
+  failure,
+  submitting,
+  submitSuccess,
+  submitFailure,
+}
 
 class OvertimeState {
-  final bool isLoading;
-  final List<OvertimeRequest> requests;
-  final String? error;
-  final bool isSubmitting;
-  final String? submitSuccess;
+  final OvertimeStatus status;
+  final List<OvertimeModel> requests;
+  final String? errorMessage;
 
   const OvertimeState({
-    this.isLoading = false,
+    this.status = OvertimeStatus.initial,
     this.requests = const [],
-    this.error,
-    this.isSubmitting = false,
-    this.submitSuccess,
+    this.errorMessage,
   });
 
   OvertimeState copyWith({
-    bool? isLoading,
-    List<OvertimeRequest>? requests,
-    String? error,
-    bool? isSubmitting,
-    String? submitSuccess,
+    OvertimeStatus? status,
+    List<OvertimeModel>? requests,
+    String? errorMessage,
   }) {
     return OvertimeState(
-      isLoading: isLoading ?? this.isLoading,
+      status: status ?? this.status,
       requests: requests ?? this.requests,
-      error: error, // Clear error if not provided? Or strictly null? Usually null overrides.
-      isSubmitting: isSubmitting ?? this.isSubmitting,
-      submitSuccess: submitSuccess,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 }

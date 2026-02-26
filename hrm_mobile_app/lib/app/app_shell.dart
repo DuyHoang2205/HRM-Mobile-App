@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hrm_mobile_app/features/home/view/home_page.dart';
 import '../../../core/widgets/placeholder_page.dart';
+import '../../features/overtime/view/overtime_registration_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -20,44 +21,42 @@ class _AppShellState extends State<AppShell> {
     PlaceholderPage(title: 'Profile'),
   ];
 
-// 1. Change to async
-Future<void> _openPlusMenu() async {
-  final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-  final size = overlay.size;
+  // 1. Change to async
+  Future<void> _openPlusMenu() async {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final size = overlay.size;
 
-  setState(() => _isMenuOpen = true);
+    setState(() => _isMenuOpen = true);
 
-  await showGeneralDialog(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'PlusMenu',
-    barrierColor: Colors.black.withOpacity(0.35),
-    transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (_, _, _) => _PlusMenuOverlay(screenSize: size),
-    transitionBuilder: (_, animation, _, child) {
-      return Transform.scale(
-        scale: Curves.easeOutBack.transform(animation.value),
-        child: Opacity(opacity: animation.value, child: child),
-      );
-    },
-  );
+    await showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'PlusMenu',
+      barrierColor: Colors.black.withOpacity(0.35),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (_, _, _) => _PlusMenuOverlay(screenSize: size),
+      transitionBuilder: (_, animation, _, child) {
+        return Transform.scale(
+          scale: Curves.easeOutBack.transform(animation.value),
+          child: Opacity(opacity: animation.value, child: child),
+        );
+      },
+    );
 
-  // This line runs ONLY after the menu is closed
-  setState(() => _isMenuOpen = false);
-}
+    // This line runs ONLY after the menu is closed
+    setState(() => _isMenuOpen = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
 
-      body: IndexedStack(
-        index: _index,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _index, children: _pages),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox(
-        width: 75, 
+        width: 75,
         height: 75,
         child: FloatingActionButton(
           backgroundColor: const Color(0xFF0B2A5B),
@@ -66,15 +65,15 @@ Future<void> _openPlusMenu() async {
           onPressed: _openPlusMenu,
           // Change icon and color based on state
           child: Icon(
-            _isMenuOpen ? Icons.close : Icons.add, 
-            size: 30, 
+            _isMenuOpen ? Icons.close : Icons.add,
+            size: 30,
             color: Colors.white, // Now explicitly white
           ),
         ),
       ),
 
-bottomNavigationBar: Transform.translate(
-        offset: const Offset(0, 12.0), 
+      bottomNavigationBar: Transform.translate(
+        offset: const Offset(0, 12.0),
         child: BottomAppBar(
           color: Colors.white,
           elevation: 10,
@@ -82,7 +81,7 @@ bottomNavigationBar: Transform.translate(
           shape: const CircularNotchedRectangle(),
           notchMargin: 10,
           padding: EdgeInsets.zero,
-          height: 80, 
+          height: 80,
           child: Row(
             children: [
               Expanded(
@@ -103,7 +102,7 @@ bottomNavigationBar: Transform.translate(
                   onTap: () => setState(() => _index = 1),
                 ),
               ),
-              const SizedBox(width: 62), 
+              const SizedBox(width: 62),
               Expanded(
                 child: _NavItem(
                   label: 'Payment',
@@ -154,7 +153,7 @@ class _NavItem extends StatelessWidget {
       child: SizedBox.expand(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.max, 
+          mainAxisSize: MainAxisSize.max,
           children: [
             Icon(selected ? activeIcon : icon, color: color, size: 24),
             const SizedBox(height: 4),
@@ -176,13 +175,17 @@ class _NavItem extends StatelessWidget {
 class _PlusMenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 
-  const _PlusMenuItem({required this.icon, required this.label});
+  const _PlusMenuItem({required this.icon, required this.label, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => Navigator.of(context).pop(),
+      onTap: () {
+        Navigator.of(context).pop();
+        if (onTap != null) onTap!();
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Row(
@@ -191,10 +194,10 @@ class _PlusMenuItem extends StatelessWidget {
           children: [
             // 1. Fixed width container for the icon
             SizedBox(
-              width: 24, 
+              width: 24,
               child: Icon(icon, color: const Color(0xFF0B2A5B), size: 22),
             ),
-            const SizedBox(width: 16), 
+            const SizedBox(width: 16),
 
             Text(
               label,
@@ -235,7 +238,8 @@ class _PlusMenuOverlay extends StatelessWidget {
           child: Center(
             child: Material(
               color: Colors.transparent,
-              child: IntrinsicWidth( // This makes the box only as wide as your longest text
+              child: IntrinsicWidth(
+                // This makes the box only as wide as your longest text
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
@@ -251,11 +255,28 @@ class _PlusMenuOverlay extends StatelessWidget {
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      _PlusMenuItem(icon: Icons.event_available, label: 'Đăng ký nghỉ phép'),
-                      _PlusMenuItem(icon: Icons.timelapse, label: 'Đăng ký làm thêm'),
-                      _PlusMenuItem(icon: Icons.flight_takeoff, label: 'Đăng ký công tác'),
-                      _PlusMenuItem(icon: Icons.receipt_long, label: 'Giải trình chấm công'),
+                    children: [
+                      const _PlusMenuItem(
+                        icon: Icons.event_available,
+                        label: 'Đăng ký nghỉ phép',
+                      ),
+                      _PlusMenuItem(
+                        icon: Icons.timelapse,
+                        label: 'Đăng ký làm thêm',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const OvertimeRegistrationPage(),
+                          ),
+                        ),
+                      ),
+                      const _PlusMenuItem(
+                        icon: Icons.flight_takeoff,
+                        label: 'Đăng ký công tác',
+                      ),
+                      const _PlusMenuItem(
+                        icon: Icons.receipt_long,
+                        label: 'Giải trình chấm công',
+                      ),
                     ],
                   ),
                 ),

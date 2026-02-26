@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../models/overtime_request.dart';
+
 import '../bloc/overtime_bloc.dart';
 import '../bloc/overtime_event.dart';
 import '../bloc/overtime_state.dart';
+import '../data/overtime_repository.dart';
+import '../models/overtime_reason.dart';
 
 class OvertimeRegistrationPage extends StatelessWidget {
   const OvertimeRegistrationPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // We create a new Bloc for submission since the ListPage bloc might be disposed if we replace route,
-    // but here we are pushing, so ListPage is still there. 
-    // However, it's cleaner to have a dedicated provider or pass the existing one.
-    // Since ListPage logic is "Fetch List", and Registration is "Submit", they can share or use separate.
-    // I'll create a new Bloc instance for simplicity of isolation.
     return BlocProvider(
-      create: (_) => OvertimeBloc(),
+      create: (_) => OvertimeBloc(repository: OvertimeRepository()),
       child: const _RegistrationView(),
     );
   }
@@ -31,45 +28,78 @@ class _RegistrationView extends StatefulWidget {
 
 class _RegistrationViewState extends State<_RegistrationView> {
   final _formKey = GlobalKey<FormState>();
-  
+
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
   bool _isNextDay = false;
-  String? _selectedReason;
+  OvertimeReason? _selectedReason;
   final TextEditingController _reasonOtherCtrl = TextEditingController();
   final TextEditingController _descCtrl = TextEditingController();
   final TextEditingController _breakCtrl = TextEditingController();
-  String? _selectedReeProMobilization;
-  String? _selectedReeProProject;
 
-  final List<String> _reasons = [
-    'Tăng ca để xây dựng kế hoạch năm tới',
-    'Tăng ca xử lý công việc phát sinh',
-    'Tăng ca chạy Deadline',
-    'Lý do khác | Other',
+  String? _selectedReeproDispatch;
+  String? _selectedReeproProject;
+
+  final List<String> _dispatchOptions = [
+    'Điều động 1',
+    'Điều động 2',
+    'Điều động 3',
   ];
+  final List<String> _projectOptions = [
+    'Dự án Alpha',
+    'Dự án Beta',
+    'Dự án Gamma',
+  ];
+
+  @override
+  void dispose() {
+    _reasonOtherCtrl.dispose();
+    _descCtrl.dispose();
+    _breakCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<OvertimeBloc, OvertimeState>(
       listener: (context, state) {
-        if (state.submitSuccess != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.submitSuccess!)));
-          Navigator.of(context).pop(true); // Return true to refresh list
-        }
-        if (state.error != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error!), backgroundColor: Colors.red));
+        if (state.status == OvertimeStatus.submitSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tạo yêu cầu làm ngoài giờ thành công!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop(true);
+        } else if (state.status == OvertimeStatus.submitFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage ?? 'Đã có lỗi xảy ra'),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       },
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text('Đăng ký làm thêm', style: TextStyle(color: Color(0xFF0B1B2B), fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Đăng ký làm thêm',
+            style: TextStyle(
+              color: Color(0xFF0B1B2B),
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          centerTitle: true,
           backgroundColor: Colors.white,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: Color(0xFF0B1B2B),
+            ),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -85,23 +115,36 @@ class _RegistrationViewState extends State<_RegistrationView> {
                 InkWell(
                   onTap: _pickDate,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
+                      border: Border.all(color: const Color(0xFFE5E7EB)),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}', style: const TextStyle(fontSize: 16)),
-                        const Icon(Icons.calendar_today_outlined, color: Colors.grey, size: 20),
+                        Text(
+                          _fmtDate(_selectedDate),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          color: Color(0xFF9AA6B2),
+                          size: 20,
+                        ),
                       ],
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 16),
-                
+
+                const SizedBox(height: 20),
+
                 Row(
                   children: [
                     Expanded(
@@ -113,16 +156,34 @@ class _RegistrationViewState extends State<_RegistrationView> {
                           InkWell(
                             onTap: () => _pickTime(true),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(
+                                  color: const Color(0xFFE5E7EB),
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(_fmtTime(_startTime), style: const TextStyle(fontSize: 16)),
-                                  const Icon(Icons.access_time, color: Colors.grey, size: 20),
+                                  Text(
+                                    _startTime == null
+                                        ? '--:--'
+                                        : _fmtTime(_startTime),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.access_time,
+                                    color: Color(0xFF9AA6B2),
+                                    size: 20,
+                                  ),
                                 ],
                               ),
                             ),
@@ -140,16 +201,34 @@ class _RegistrationViewState extends State<_RegistrationView> {
                           InkWell(
                             onTap: () => _pickTime(false),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(
+                                  color: const Color(0xFFE5E7EB),
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(_fmtTime(_endTime), style: const TextStyle(fontSize: 16)),
-                                  const Icon(Icons.access_time, color: Colors.grey, size: 20),
+                                  Text(
+                                    _endTime == null
+                                        ? '--:--'
+                                        : _fmtTime(_endTime),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.access_time,
+                                    color: Color(0xFF9AA6B2),
+                                    size: 20,
+                                  ),
                                 ],
                               ),
                             ),
@@ -159,49 +238,114 @@ class _RegistrationViewState extends State<_RegistrationView> {
                     ),
                   ],
                 ),
-                
-                const SizedBox(height: 16),
-                
+
+                const SizedBox(height: 12),
+
                 Row(
                   children: [
-                    Checkbox(
-                      value: _isNextDay,
-                      activeColor: const Color(0xFF00C389),
-                      onChanged: (v) => setState(() => _isNextDay = v ?? false),
+                    Transform.scale(
+                      scale: 1.1,
+                      child: Checkbox(
+                        value: _isNextDay,
+                        activeColor: const Color(0xFF0B2A5B),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        side: const BorderSide(color: Color(0xFFD1D5DB)),
+                        onChanged: (v) =>
+                            setState(() => _isNextDay = v ?? false),
+                      ),
                     ),
-                    const Text('Làm thêm sang ngày hôm sau'),
+                    const Text(
+                      'Làm thêm sang ngày hôm sau',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF374151),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
-                
-                const SizedBox(height: 16),
+
+                const SizedBox(height: 20),
                 _buildLabel('Lý do', required: true),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                DropdownButtonFormField<OvertimeReason>(
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF9AA6B2),
                   ),
-                  initialValue: _selectedReason,
-                  items: _reasons.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0B2A5B)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  value: _selectedReason,
+                  hint: const Text('Chọn lý do'),
+                  items: OvertimeReason.values
+                      .map(
+                        (e) => DropdownMenuItem(
+                          value: e,
+                          child: SizedBox(
+                            width:
+                                MediaQuery.of(context).size.width -
+                                80, // Prevent overflow
+                            child: Text(
+                              '${e.labelVi} | ${e.labelEn}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
                   onChanged: (v) => setState(() => _selectedReason = v),
                   validator: (v) => v == null ? 'Vui lòng chọn lý do' : null,
                   isExpanded: true,
                 ),
 
-                if (_selectedReason == 'Lý do khác | Other') ...[
+                if (_selectedReason == OvertimeReason.other) ...[
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _reasonOtherCtrl,
                     decoration: InputDecoration(
                       hintText: 'Nhập lý do khác',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFF0B2A5B)),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                     ),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Vui lòng nhập lý do'
+                        : null,
                   ),
                 ],
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _buildLabel('Diễn giải', required: true),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -209,66 +353,140 @@ class _RegistrationViewState extends State<_RegistrationView> {
                   maxLines: 4,
                   maxLength: 500,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    hintText: 'Nhập diễn giải...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0B2A5B)),
+                    ),
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Vui lòng nhập diễn giải' : null,
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Vui lòng nhập diễn giải'
+                      : null,
                 ),
 
                 const SizedBox(height: 16),
-                const Text('Thông tin bổ sung', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const Divider(color: Color(0xFFE5E7EB), thickness: 1),
                 const SizedBox(height: 12),
-                
+
+                const Text(
+                  'Thông tin bổ sung',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF0B1B2B),
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _breakCtrl,
                   decoration: InputDecoration(
                     hintText: 'Số phút nghỉ giữa giờ',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0B2A5B)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                   ),
                   keyboardType: TextInputType.number,
                 ),
-                const SizedBox(height: 12),
-                 DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    hintText: 'Điều động ReePro',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                  ),
-                  initialValue: _selectedReeProMobilization,
-                  items: const [DropdownMenuItem(value: 'Option 1', child: Text('Option 1'))], // Placeholder
-                  onChanged: (v) => setState(() => _selectedReeProMobilization = v),
-                ),
-                const SizedBox(height: 12),
+
+                const SizedBox(height: 16),
+                _buildLabel('Điều động ReePro'),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    hintText: 'Công trình ReePro',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF9AA6B2),
                   ),
-                  initialValue: _selectedReeProProject,
-                  items: const [DropdownMenuItem(value: 'Project A', child: Text('Project A'))], // Placeholder
-                  onChanged: (v) => setState(() => _selectedReeProProject = v),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0B2A5B)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  value: _selectedReeproDispatch,
+                  hint: const Text('Lựa chọn'),
+                  items: _dispatchOptions
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedReeproDispatch = v),
                 ),
 
+                const SizedBox(height: 16),
+                _buildLabel('Công trình ReePro'),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Color(0xFF9AA6B2),
+                  ),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0B2A5B)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                  ),
+                  value: _selectedReeproProject,
+                  hint: const Text('Lựa chọn'),
+                  items: _projectOptions
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedReeproProject = v),
+                ),
+
+                const SizedBox(height: 80), // padding for bottom button
               ],
             ),
           ),
         ),
-        bottomNavigationBar: Container(
+        bottomSheet: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, -4),
-              ),
-            ],
+            border: Border(top: BorderSide(color: Colors.grey.shade200)),
           ),
           child: SafeArea(
             child: SizedBox(
@@ -276,20 +494,35 @@ class _RegistrationViewState extends State<_RegistrationView> {
               height: 50,
               child: BlocBuilder<OvertimeBloc, OvertimeState>(
                 builder: (context, state) {
+                  final isSubmitting =
+                      state.status == OvertimeStatus.submitting;
+                  final btnColor = const Color(0xFF0B2A5B);
                   return ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFCACFD6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ).copyWith(
-                      backgroundColor: WidgetStateProperty.resolveWith((states) {
-                         if (states.contains(WidgetState.disabled)) return const Color(0xFFCACFD6);
-                         return const Color(0xFF00C389);
-                      }), 
+                      backgroundColor: btnColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                    onPressed: state.isSubmitting ? null : _submit,
-                    child: state.isSubmitting 
-                        ? const CircularProgressIndicator(color: Colors.white) 
-                        : const Text('Gửi yêu cầu', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    onPressed: isSubmitting ? null : _submit,
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            'Gửi yêu cầu',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
                   );
                 },
               ),
@@ -304,14 +537,27 @@ class _RegistrationViewState extends State<_RegistrationView> {
     return RichText(
       text: TextSpan(
         text: text,
-        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black, fontSize: 16),
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF111827),
+          fontSize: 15,
+        ),
         children: [
-          if (required) const TextSpan(text: ' *', style: TextStyle(color: Colors.red)),
+          if (required)
+            const TextSpan(
+              text: ' *',
+              style: TextStyle(color: Color(0xFFEF4444)),
+            ),
         ],
       ),
     );
   }
-  
+
+  String _fmtDate(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(d.day)}/${two(d.month)}/${d.year}';
+  }
+
   String _fmtTime(TimeOfDay? t) {
     if (t == null) return '';
     final h = t.hour.toString().padLeft(2, '0');
@@ -325,6 +571,14 @@ class _RegistrationViewState extends State<_RegistrationView> {
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFF0B2A5B)),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) setState(() => _selectedDate = picked);
   }
@@ -333,6 +587,14 @@ class _RegistrationViewState extends State<_RegistrationView> {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: Color(0xFF0B2A5B)),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
@@ -346,25 +608,36 @@ class _RegistrationViewState extends State<_RegistrationView> {
   }
 
   void _submit() {
-    if (_formKey.currentState?.validate() ?? false) {
-      if (_startTime == null || _endTime == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn thời gian bắt đầu và kết thúc')));
-        return;
-      }
-      
-      final req = OvertimeRequest(
-        id: 0, // new
-        date: _selectedDate,
-        startTime: _fmtTime(_startTime),
-        endTime: _fmtTime(_endTime),
-        isNextDay: _isNextDay,
-        reason: _selectedReason == 'Lý do khác | Other' ? (_reasonOtherCtrl.text) : _selectedReason!,
-        description: _descCtrl.text,
-        status: 'PENDING',
-        createdDate: DateTime.now(),
+    bool hasTimeError = false;
+    if (_startTime == null || _endTime == null) {
+      hasTimeError = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn thời gian bắt đầu và kết thúc'),
+          backgroundColor: Colors.red,
+        ),
       );
-      
-      context.read<OvertimeBloc>().add(OvertimeRequestSubmitted(req));
+    }
+
+    if (_formKey.currentState?.validate() ?? false) {
+      if (hasTimeError) return;
+
+      final finalReason = _selectedReason == OvertimeReason.other
+          ? _reasonOtherCtrl.text
+          : _selectedReason!.labelVi;
+      context.read<OvertimeBloc>().add(
+        SubmitOvertimeRequest(
+          date: _selectedDate,
+          startTime: _fmtTime(_startTime),
+          endTime: _fmtTime(_endTime),
+          reason: finalReason,
+          description: _descCtrl.text,
+          isNextDay: _isNextDay,
+          breakMinutes: int.tryParse(_breakCtrl.text) ?? 0,
+          reeproDispatch: _selectedReeproDispatch,
+          reeproProject: _selectedReeproProject,
+        ),
+      );
     }
   }
 }

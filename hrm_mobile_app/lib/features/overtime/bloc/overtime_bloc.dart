@@ -1,112 +1,85 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/network/dio_client.dart';
+
+import '../data/overtime_repository.dart';
+import '../models/overtime_model.dart';
 import 'overtime_event.dart';
 import 'overtime_state.dart';
-import '../models/overtime_request.dart';
 
 class OvertimeBloc extends Bloc<OvertimeEvent, OvertimeState> {
-  final DioClient _dio = DioClient();
+  final OvertimeRepository _repository;
 
-  OvertimeBloc() : super(const OvertimeState()) {
-    on<OvertimeStarted>(_onStarted);
-    on<OvertimeRefreshed>(_onRefreshed);
-    on<OvertimeRequestSubmitted>(_onSubmitted);
+  OvertimeBloc({required OvertimeRepository repository})
+    : _repository = repository,
+      super(const OvertimeState()) {
+    on<LoadOvertimeList>(_onLoadOvertimeList);
+    on<SubmitOvertimeRequest>(_onSubmitOvertimeRequest);
   }
 
-  Future<void> _onStarted(OvertimeStarted event, Emitter<OvertimeState> emit) async {
-    emit(state.copyWith(isLoading: true));
-    await _fetchData(emit);
-  }
-
-  Future<void> _onRefreshed(OvertimeRefreshed event, Emitter<OvertimeState> emit) async {
-    // refresh without setting isLoading true if you prefer, or set it true.
-    // Usually pull-to-refresh handles spinner.
-    await _fetchData(emit);
-  }
-
-  Future<void> _fetchData(Emitter<OvertimeState> emit) async {
-    // MOCK DATA FOR UI TESTING
-    await Future.delayed(const Duration(milliseconds: 500)); // Simulate net
-    final mockRequests = [
-      OvertimeRequest(
-        id: 1,
-        date: DateTime.now(),
-        startTime: '17:30',
-        endTime: '19:30',
-        isNextDay: false,
-        reason: 'Tăng ca chạy Deadline',
-        description: 'Fix bug gấp server',
-        status: 'APPROVED',
-        createdDate: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      OvertimeRequest(
-         id: 2,
-        date: DateTime.now().add(const Duration(days: 1)),
-        startTime: '18:00',
-        endTime: '20:00',
-        isNextDay: false,
-        reason: 'Lý do khác | Other',
-        description: 'Họp team',
-        status: 'PENDING',
-        createdDate: DateTime.now(),
-      ),
-    ];
-     emit(state.copyWith(isLoading: false, requests: mockRequests));
-
-    /* API INTEGRATION PENDING BACKEND
+  Future<void> _onLoadOvertimeList(
+    LoadOvertimeList event,
+    Emitter<OvertimeState> emit,
+  ) async {
+    emit(state.copyWith(status: OvertimeStatus.loading));
     try {
-      final siteId = await AuthHelper.getSiteId();
-      final employeeId = await AuthHelper.getEmployeeId();
+      final requests = await _repository.fetchOvertimeRequests();
+      emit(state.copyWith(status: OvertimeStatus.success, requests: requests));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: OvertimeStatus.failure,
+          errorMessage: e.toString(),
+        ),
+      );
+    }
+  }
 
-      if (siteId == null || employeeId == null) {
-        emit(state.copyWith(isLoading: false, error: 'Authentication Error'));
-        return;
+  Future<void> _onSubmitOvertimeRequest(
+    SubmitOvertimeRequest event,
+    Emitter<OvertimeState> emit,
+  ) async {
+    emit(state.copyWith(status: OvertimeStatus.submitting));
+    try {
+      // Calculate basic total hours for mock logic
+      final startParts = event.startTime.split(':');
+      final endParts = event.endTime.split(':');
+      double totalHrs = 0;
+      if (startParts.length == 2 && endParts.length == 2) {
+        final startMin =
+            int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
+        int endMin = int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
+        if (event.isNextDay) endMin += 24 * 60;
+        totalHrs = (endMin - startMin) / 60.0;
+        if (totalHrs < 0) totalHrs = 0;
       }
 
-      final response = await _dio.dio.get(
-        'overtime-request/$siteId',
-        queryParameters: {'employeeId': employeeId},
+      final newRequest = OvertimeModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        totalHours: double.parse(totalHrs.toStringAsFixed(1)),
+        reason: event.reason,
+        description: event.description,
+        isNextDay: event.isNextDay,
+        breakMinutes: event.breakMinutes,
+        reeproDispatch: event.reeproDispatch,
+        reeproProject: event.reeproProject,
+        approverName: 'Phạm Văn D', // Hardcoded approver
+        status: 'Chờ duyệt',
       );
 
-      final List<dynamic> raw = response.data is List ? response.data as List : [];
-      final requests = raw.map((e) => OvertimeRequest.fromJson(e)).toList();
+      await _repository.createOvertimeRequest(newRequest);
 
-      emit(state.copyWith(isLoading: false, requests: requests));
+      // Emit success and refresh the list
+      emit(state.copyWith(status: OvertimeStatus.submitSuccess));
+      add(const LoadOvertimeList());
     } catch (e) {
-      emit(state.copyWith(isLoading: false, error: e.toString()));
+      emit(
+        state.copyWith(
+          status: OvertimeStatus.submitFailure,
+          errorMessage: e.toString(),
+        ),
+      );
     }
-    */
-  }
-
-  Future<void> _onSubmitted(OvertimeRequestSubmitted event, Emitter<OvertimeState> emit) async {
-    emit(state.copyWith(isSubmitting: true));
-    
-    // MOCK SUBMISSION
-    await Future.delayed(const Duration(seconds: 1));
-    emit(state.copyWith(isSubmitting: false, submitSuccess: 'Gửi yêu cầu thành công (MOCK)'));
-    // In real app, we would add the new item to the list or refresh.
-    // For mock, we can just trigger a refresh which will reload the mock list.
-    add(const OvertimeRefreshed());
-
-    /* API INTEGRATION PENDING BACKEND
-    try {
-      final siteId = await AuthHelper.getSiteId();
-      final employeeId = await AuthHelper.getEmployeeId();
-
-      if (siteId == null || employeeId == null) throw Exception('Auth missing');
-
-      final body = event.request.toJson();
-      body['SiteID'] = siteId;
-      body['EmployeeID'] = int.tryParse(employeeId) ?? 0;
-
-      await _dio.dio.post('overtime-request', data: body);
-
-      emit(state.copyWith(isSubmitting: false, submitSuccess: 'Gửi yêu cầu thành công'));
-      // Refresh list
-      add(const OvertimeRefreshed());
-    } catch (e) {
-      emit(state.copyWith(isSubmitting: false, error: e.toString()));
-    }
-    */
   }
 }

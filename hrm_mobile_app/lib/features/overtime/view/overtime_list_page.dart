@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../attendance/view/attendance_page.dart'; // Reuse logic/styles if possible? No, independent.
+
 import '../bloc/overtime_bloc.dart';
 import '../bloc/overtime_event.dart';
 import '../bloc/overtime_state.dart';
+import '../data/overtime_repository.dart';
 import 'overtime_registration_page.dart';
 
 class OvertimeListPage extends StatelessWidget {
@@ -12,7 +13,9 @@ class OvertimeListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => OvertimeBloc()..add(const OvertimeStarted()),
+      create: (_) =>
+          OvertimeBloc(repository: OvertimeRepository())
+            ..add(const LoadOvertimeList()),
       child: const _OvertimeListView(),
     );
   }
@@ -28,23 +31,37 @@ class _OvertimeListView extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Làm ngoài giờ',
-          style: TextStyle(color: Color(0xFF0B1B2B), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF0B1B2B),
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0B1B2B),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Color(0xFF0B1B2B), size: 30),
+            icon: const Icon(Icons.add, color: Color(0xFF0B2A5B), size: 28),
             onPressed: () async {
+              final bloc = context
+                  .read<
+                    OvertimeBloc
+                  >(); // pass Bloc down if you want, but easier to just refresh on pop
               final result = await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const OvertimeRegistrationPage()),
+                MaterialPageRoute(
+                  builder: (_) => const OvertimeRegistrationPage(),
+                ),
               );
               if (result == true) {
-                 if (context.mounted) context.read<OvertimeBloc>().add(const OvertimeRefreshed());
+                bloc.add(const LoadOvertimeList());
               }
             },
           ),
@@ -52,19 +69,33 @@ class _OvertimeListView extends StatelessWidget {
       ),
       body: BlocBuilder<OvertimeBloc, OvertimeState>(
         builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state.status == OvertimeStatus.loading ||
+              state.status == OvertimeStatus.initial) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0B2A5B)),
+            );
           }
           if (state.requests.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Chưa có yêu cầu làm ngoài giờ', style: TextStyle(color: Color(0xFF9AA6B2))),
+                  const Text(
+                    'Chưa có yêu cầu làm ngoài giờ',
+                    style: TextStyle(color: Color(0xFF9AA6B2)),
+                  ),
                   const SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () => context.read<OvertimeBloc>().add(const OvertimeRefreshed()), // Retry
-                    child: const Text('Tải lại'),
+                    onPressed: () => context.read<OvertimeBloc>().add(
+                      const LoadOvertimeList(),
+                    ), // Retry
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0B2A5B),
+                    ),
+                    child: const Text(
+                      'Tải lại',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -72,7 +103,7 @@ class _OvertimeListView extends StatelessWidget {
           }
           return RefreshIndicator(
             onRefresh: () async {
-              context.read<OvertimeBloc>().add(const OvertimeRefreshed());
+              context.read<OvertimeBloc>().add(const LoadOvertimeList());
             },
             child: ListView.separated(
               padding: const EdgeInsets.all(16),
@@ -85,13 +116,7 @@ class _OvertimeListView extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,31 +125,75 @@ class _OvertimeListView extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            req.reason,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            _fmtDate(req.date),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: Color(0xFF0B1B2B),
+                            ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: req.status == 'PENDING' ? Colors.orange.withOpacity(0.1) : Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                              color: req.status == 'Chờ duyệt'
+                                  ? const Color(0xFFFEF3C7)
+                                  : (req.status == 'Đã duyệt' ||
+                                        req.status == 'APPROVED')
+                                  ? Colors.green.withOpacity(0.1)
+                                  : Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               req.status,
                               style: TextStyle(
-                                color: req.status == 'PENDING' ? Colors.orange : Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                color: req.status == 'Chờ duyệt'
+                                    ? const Color(0xFFD97706)
+                                    : (req.status == 'Đã duyệt' ||
+                                          req.status == 'APPROVED')
+                                    ? Colors.green
+                                    : Colors.red,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text('Ngày: ${_fmtDate(req.date)}'),
-                      Text('Thời gian: ${req.startTime} - ${req.endTime}'),
-                      if (req.isNextDay)
-                        const Text('Làm thêm sang ngày hôm sau', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        'Thời gian: ',
+                        '${req.startTime} - ${req.endTime}',
+                      ),
+                      const SizedBox(height: 6),
+                      _buildInfoRow('Lý do: ', req.reason),
+                      const SizedBox(height: 6),
+                      _buildInfoRow('Diễn giải: ', req.description),
+                      const SizedBox(height: 6),
+                      _buildInfoRow(
+                        'Nghỉ giữa giờ: ',
+                        '${req.breakMinutes} phút',
+                      ),
+                      if (req.reeproDispatch != null &&
+                          req.reeproDispatch!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow(
+                          'Điều động ReePro: ',
+                          req.reeproDispatch!,
+                        ),
+                      ],
+                      if (req.reeproProject != null &&
+                          req.reeproProject!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildInfoRow(
+                          'Công trình ReePro: ',
+                          req.reeproProject!,
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      _buildInfoRow('Người duyệt: ', req.approverName),
                     ],
                   ),
                 );
@@ -132,6 +201,28 @@ class _OvertimeListView extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String title, String value) {
+    return RichText(
+      text: TextSpan(
+        text: title,
+        style: const TextStyle(
+          color: Color(0xFF6B7280),
+          fontSize: 14,
+          height: 1.5,
+        ),
+        children: [
+          TextSpan(
+            text: value,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
