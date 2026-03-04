@@ -8,10 +8,21 @@ class DioClient {
   late final Dio dio;
 
   DioClient() {
+    // ─── BACKEND URL CONFIG ───────────────────────────────────────────
+    // Đổi sang true để test với backend local (port 3004):
+    //   flutter run --dart-define=USE_LOCAL=true
+    // Mặc định false → dùng production server
+    const useLocalBackend = bool.fromEnvironment('USE_LOCAL');
+
+    // iOS Simulator  → localhost:3004
+    // Android Emu    → 10.0.2.2:3004
+    // Real device    → IP máy tính: 192.168.x.x:3004
+    const localUrl = 'http://localhost:3004/api/';
+    const prodUrl = 'http://vpn.dptsolution.net:853/hrm/api/';
+
     dio = Dio(
       BaseOptions(
-        baseUrl: 'http://vpn.dptsolution.net:853/hrm/api/',
-        // baseUrl: 'http://103.3.247.52:853/hrm/api/',
+        baseUrl: useLocalBackend ? localUrl : prodUrl,
         validateStatus: (status) {
           if (status == null) return false;
           if (status == 401) return false; // Trigger onError for token refresh

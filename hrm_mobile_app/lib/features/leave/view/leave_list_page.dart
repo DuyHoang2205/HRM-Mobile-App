@@ -27,12 +27,18 @@ class _LeaveListView extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'Nghỉ phép',
-          style: TextStyle(color: Color(0xFF0B1B2B), fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Color(0xFF0B1B2B),
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0B1B2B)),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Color(0xFF0B1B2B),
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -40,10 +46,14 @@ class _LeaveListView extends StatelessWidget {
             icon: const Icon(Icons.add, color: Color(0xFF0B1B2B), size: 30),
             onPressed: () async {
               final result = await Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const LeaveRegistrationPage()),
+                MaterialPageRoute(
+                  builder: (_) => const LeaveRegistrationPage(),
+                ),
               );
               if (result == true) {
-                 if (context.mounted) context.read<LeaveBloc>().add(const LeaveRefreshed());
+                if (context.mounted) {
+                  context.read<LeaveBloc>().add(const LeaveRefreshed());
+                }
               }
             },
           ),
@@ -59,10 +69,14 @@ class _LeaveListView extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Chưa có yêu cầu nghỉ phép', style: TextStyle(color: Color(0xFF9AA6B2))),
+                  const Text(
+                    'Chưa có yêu cầu nghỉ phép',
+                    style: TextStyle(color: Color(0xFF9AA6B2)),
+                  ),
                   const SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () => context.read<LeaveBloc>().add(const LeaveRefreshed()),
+                    onPressed: () =>
+                        context.read<LeaveBloc>().add(const LeaveRefreshed()),
                     child: const Text('Tải lại'),
                   ),
                 ],
@@ -79,6 +93,24 @@ class _LeaveListView extends StatelessWidget {
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final req = state.requests[index];
+
+                final statusLabel = switch (req.status) {
+                  0 => 'CHỜ DUYỆT',
+                  1 => 'CHỜ DUYỆT',
+                  2 => 'ĐÃ DUYỆT',
+                  3 => 'ĐÃ DUYỆT',
+                  4 => 'TỪ CHỐI',
+                  _ => 'KHÔNG RÕ',
+                };
+                final statusColor = switch (req.status) {
+                  0 => Colors.orange,
+                  1 => Colors.orange,
+                  2 => Colors.green,
+                  3 => Colors.green,
+                  4 => Colors.red,
+                  _ => Colors.grey,
+                };
+
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -98,23 +130,39 @@ class _LeaveListView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          // Tự động map ID sang Tên Loại Phép tại máy khách
                           Expanded(
-                            child: Text(
-                              req.reason.split('|')[0].trim(), // Show Vietnamese part mostly
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              overflow: TextOverflow.ellipsis,
+                            child: Builder(
+                              builder: (context) {
+                                final permName = state.permissionTypes
+                                    .where((p) => p.id == req.permissionType)
+                                    .map((p) => p.permissionType)
+                                    .firstOrNull;
+                                return Text(
+                                  permName ??
+                                      'Loại phép #${req.permissionType}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                );
+                              },
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: req.status == 'PENDING' ? Colors.orange.withValues(alpha: 0.1) : Colors.green.withValues(alpha: 0.1),
+                              color: statusColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              req.status,
+                              statusLabel,
                               style: TextStyle(
-                                color: req.status == 'PENDING' ? Colors.orange : Colors.green,
+                                color: statusColor,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 12,
                               ),
@@ -123,11 +171,15 @@ class _LeaveListView extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('Ngày: ${_fmtDate(req.startDate)} - ${_fmtDate(req.endDate)}'),
-                      if (req.location != null && req.location!.isNotEmpty)
-                        Text('Địa điểm: ${req.location}'),
+                      Text(
+                        'Ngày: ${_fmtDate(req.fromDate)} - ${_fmtDate(req.toDate)}',
+                      ),
+                      Text('Số ngày: ${_fmtQty(req.qty)}'),
                       if (req.description.isNotEmpty)
-                         Text('Diễn giải: ${req.description}', style: const TextStyle(color: Colors.grey)),
+                        Text(
+                          'Diễn giải: ${req.description}',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                     ],
                   ),
                 );
@@ -142,5 +194,12 @@ class _LeaveListView extends StatelessWidget {
   String _fmtDate(DateTime d) {
     String two(int v) => v.toString().padLeft(2, '0');
     return '${two(d.day)}/${two(d.month)}/${d.year}';
+  }
+
+  /// Hiển thị số ngày: nếu là số nguyên thì bỏ .0 (ví dụ: 2.0 → "2", 2.5 → "2.5")
+  String _fmtQty(double qty) {
+    return qty == qty.truncateToDouble()
+        ? qty.toInt().toString()
+        : qty.toString();
   }
 }

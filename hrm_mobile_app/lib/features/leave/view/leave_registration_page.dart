@@ -4,6 +4,7 @@ import '../models/leave_request.dart';
 import '../bloc/leave_bloc.dart';
 import '../bloc/leave_event.dart';
 import '../bloc/leave_state.dart';
+import '../../../core/auth/auth_helper.dart';
 
 class LeaveRegistrationPage extends StatelessWidget {
   const LeaveRegistrationPage({super.key});
@@ -11,7 +12,7 @@ class LeaveRegistrationPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => LeaveBloc(),
+      create: (_) => LeaveBloc()..add(const LeaveStarted()),
       child: const _LeaveRegistrationView(),
     );
   }
@@ -29,35 +30,33 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
 
   DateTime? _startDate;
   DateTime? _endDate;
-  String? _selectedReason;
-  final TextEditingController _locationCtrl = TextEditingController();
+
+  // permissionType là số nguyên (ID), được load từ state.permissionTypes (API)
+  int? _selectedPermissionTypeId;
+
   final TextEditingController _descCtrl = TextEditingController();
   final List<String> _attachedFiles = [];
-
-  final List<String> _reasons = [
-    'Nghỉ phép thường niên | Annual leave',
-    'Nghỉ bù | Compensatory leave',
-    'Nghỉ không lương | Unpaid leave',
-    'Nghỉ ốm hưởng BHXH | Sick leave with social insurance benefits',
-    'Nghỉ ngưng việc hay chờ việc | Standby or Temporary layoff',
-    'Nghỉ bản thân kết hôn | Marriage leave',
-    'Nghỉ ma chay (3 ngày) | Bereavement leave (3 days)',
-    'Nghỉ người thân kết hôn | Leave for a relative\'s wedding',
-    'Nghỉ tai nạn lao động | Leave due to workplace accident',
-    'Nghỉ khám thai | Prenatal check-up leave',
-    'Nghỉ Thai sản | Maternity leave',
-    'Nghỉ ma chay (1 ngày) | Bereavement leave (1 day)',
-  ];
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<LeaveBloc, LeaveState>(
       listener: (context, state) {
         if (state.submitSuccess != null) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(state.submitSuccess!)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.submitSuccess!),
+              backgroundColor: Colors.green,
+            ),
+          );
           Navigator.of(context).pop(true);
+        }
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
       },
       child: Scaffold(
@@ -150,56 +149,55 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                 ),
 
                 const SizedBox(height: 16),
-                _buildLabel('Lý do', required: true),
+                _buildLabel('Lý do / Loại phép', required: true),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
+                // Dropdown load từ state.permissionTypes (API thật, không hardcode)
+                BlocBuilder<LeaveBloc, LeaveState>(
+                  buildWhen: (prev, cur) =>
+                      prev.permissionTypes != cur.permissionTypes ||
+                      prev.isLoading != cur.isLoading,
+                  builder: (context, state) {
+                    if (state.isLoading && state.permissionTypes.isEmpty) {
+                      return const LinearProgressIndicator();
+                    }
+                    return DropdownButtonFormField<int>(
+                      // Ép menu xổ xuống có chiều cao tối đa và có thể cuộn
+                      menuMaxHeight: 300,
+                      dropdownColor: Colors.white,
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                  ),
-                  initialValue: _selectedReason,
-                  isExpanded: true,
-                  items: _reasons
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(e, overflow: TextOverflow.ellipsis),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
                         ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedReason = v),
-                  validator: (v) => v == null ? 'Vui lòng chọn lý do' : null,
-                ),
-
-                const SizedBox(height: 16),
-                _buildLabel('Địa điểm'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _locationCtrl,
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 14,
-                    ),
-                  ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                      ),
+                      initialValue: _selectedPermissionTypeId,
+                      isExpanded: true,
+                      items: state.permissionTypes
+                          .map(
+                            (e) => DropdownMenuItem<int>(
+                              value: e.id,
+                              child: Text(
+                                e.permissionType,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) =>
+                          setState(() => _selectedPermissionTypeId = v),
+                      validator: (v) =>
+                          v == null ? 'Vui lòng chọn loại phép' : null,
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 16),
@@ -399,16 +397,32 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
   // }
 
   Future<void> _pickDate(bool isStart) async {
+    // Ngày tối thiểu: ngày mai (không được xin nghỉ cho ngày hôm nay hoặc quá khứ)
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final todayMidnight = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+
+    final initialDate = isStart
+        ? (_startDate != null && _startDate!.isAfter(todayMidnight)
+              ? _startDate!
+              : todayMidnight)
+        : (_endDate != null && _endDate!.isAfter(todayMidnight)
+              ? _endDate!
+              : (_startDate ?? todayMidnight));
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
+      initialDate: initialDate,
+      firstDate: todayMidnight, // ← chỉ chọn từ ngày mai trở đi
       lastDate: DateTime(2030),
     );
     if (picked != null) {
       setState(() {
         if (isStart) {
           _startDate = picked;
+          // Nếu ngày kết thúc đang được chọn bé hơn ngày bắt đầu mới → reset
+          if (_endDate != null && _endDate!.isBefore(picked)) {
+            _endDate = null;
+          }
         } else {
           _endDate = picked;
         }
@@ -416,7 +430,8 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
     }
   }
 
-  void _submit() {
+  // _submit() bất đồng bộ vì cần đọc AuthHelper (secure storage)
+  Future<void> _submit() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_startDate == null || _endDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -427,18 +442,52 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
         return;
       }
 
+      // Lấy thông tin user từ secure session — không hardcode
+      final employeeId = await AuthHelper.getEmployeeId();
+      final siteId = await AuthHelper.getSiteId();
+      // staffCode được dùng làm createBy/updateBy (theo convention của backend)
+      final staffCode = await AuthHelper.getStaffCode();
+
+      if (employeeId == null || staffCode == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Không lấy được thông tin phiên đăng nhập. Vui lòng đăng nhập lại.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Tính số ngày nghỉ (qty)
+      final diffDays = _endDate!.difference(_startDate!).inDays + 1;
+
       final req = LeaveRequest(
-        id: 0,
-        startDate: _startDate!,
-        endDate: _endDate!,
-        reason: _selectedReason!,
-        location: _locationCtrl.text,
-        description: _descCtrl.text,
-        status: 'PENDING',
-        createdDate: DateTime.now(),
+        // id không gửi khi tạo mới — backend tự sinh (PrimaryGeneratedColumn)
+        employeeID: employeeId,
+        status: 0, // 0 = draft / chờ nộp
+        permissionType: _selectedPermissionTypeId!,
+        fromDate: _startDate!,
+        toDate: _endDate!,
+        expired: _endDate!.add(
+          const Duration(days: 30),
+        ), // Convention: hết hạn sau 30 ngày
+        qty: diffDays.toDouble(),
+        year: _startDate!.year,
+        description: _descCtrl.text.trim(),
+        createBy: staffCode, // dùng staffCode theo convention của backend
+        updateBy: staffCode,
+        siteID: siteId,
+        docType:
+            'OLDocType', // Phải là 'OLDocType' để SP ApproveProgressSave xử lý đúng
       );
 
-      context.read<LeaveBloc>().add(LeaveRequestSubmitted(req));
+      if (mounted) {
+        context.read<LeaveBloc>().add(LeaveRequestSubmitted(req));
+      }
     }
   }
 }
