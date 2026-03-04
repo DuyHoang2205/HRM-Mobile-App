@@ -414,6 +414,29 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
       initialDate: initialDate,
       firstDate: todayMidnight, // ← chỉ chọn từ ngày mai trở đi
       lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(
+                0xFFE55A00,
+              ), // Màu cam chủ đạo cho ngày đang chọn và header
+              onPrimary: Colors.white, // Màu chữ trên nền cam (Trắng)
+              onSurface: Color(
+                0xFF0B1B2B,
+              ), // Màu chữ số ngày bình thường (Xanh đen)
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(
+                  0xFFE55A00,
+                ), // Màu chữ của nút OK/Cancel
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {

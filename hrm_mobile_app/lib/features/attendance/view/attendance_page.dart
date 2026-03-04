@@ -158,6 +158,27 @@ class _AttendanceTitle extends StatelessWidget {
                   firstDate: DateTime(2020),
                   lastDate: DateTime(2030),
                   locale: const Locale('vi', 'VN'),
+                  builder: (context, child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: const ColorScheme.light(
+                          primary: Color(0xFFE55A00), // Màu cam
+                          onPrimary: Colors.white,
+                          onSurface: Color(
+                            0xFF0B1B2B,
+                          ), // Chữ ngày thường màu xanh thẫm
+                        ),
+                        textButtonTheme: TextButtonThemeData(
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(
+                              0xFFE55A00,
+                            ), // Nút Lưu/Hủy màu cam
+                          ),
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
                 );
                 if (!context.mounted) return;
                 if (picked != null) {
