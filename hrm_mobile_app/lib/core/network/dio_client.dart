@@ -14,7 +14,7 @@ class DioClient {
 
     // Khi cần test local, bạn chỉ cần comment dòng `baseUrl: prodUrl` ở dưới
     // và uncomment dòng `baseUrl: localUrl`
-    // ignore: unused_local_variable
+    // const localUrl = 'http://192.168.10.18:3004/api/';
     const localUrl = 'http://localhost:3004/api/';
 
     dio = Dio(

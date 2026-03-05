@@ -1,31 +1,26 @@
-abstract class OvertimeEvent {
+import 'package:equatable/equatable.dart';
+import '../models/overtime_request.dart';
+
+abstract class OvertimeEvent extends Equatable {
   const OvertimeEvent();
+  @override
+  List<Object?> get props => [];
 }
 
-class LoadOvertimeList extends OvertimeEvent {
-  const LoadOvertimeList();
+/// Tải danh sách tăng ca lần đầu
+class OvertimeStarted extends OvertimeEvent {
+  const OvertimeStarted();
 }
 
-class SubmitOvertimeRequest extends OvertimeEvent {
-  final DateTime date;
-  final String startTime;
-  final String endTime;
-  final String reason;
-  final String description;
-  final bool isNextDay;
-  final int breakMinutes;
-  final String? reeproDispatch;
-  final String? reeproProject;
+/// Pull-to-refresh
+class OvertimeRefreshed extends OvertimeEvent {
+  const OvertimeRefreshed();
+}
 
-  const SubmitOvertimeRequest({
-    required this.date,
-    required this.startTime,
-    required this.endTime,
-    required this.reason,
-    required this.description,
-    required this.isNextDay,
-    required this.breakMinutes,
-    this.reeproDispatch,
-    this.reeproProject,
-  });
+/// Nộp đơn tăng ca mới
+class OvertimeRequestSubmitted extends OvertimeEvent {
+  final OvertimeRequest request;
+  const OvertimeRequestSubmitted(this.request);
+  @override
+  List<Object?> get props => [request];
 }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hrm_mobile_app/features/home/view/home_page.dart';
 import '../../../core/widgets/placeholder_page.dart';
-import '../../features/overtime/view/overtime_registration_page.dart';
+import '../../features/leave/view/leave_list_page.dart';
+import '../../features/overtime/view/overtime_list_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -256,16 +257,21 @@ class _PlusMenuOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const _PlusMenuItem(
+                      _PlusMenuItem(
                         icon: Icons.event_available,
                         label: 'Đăng ký nghỉ phép',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LeaveListPage(),
+                          ),
+                        ),
                       ),
                       _PlusMenuItem(
                         icon: Icons.timelapse,
                         label: 'Đăng ký làm thêm',
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const OvertimeRegistrationPage(),
+                            builder: (_) => const OvertimeListPage(),
                           ),
                         ),
                       ),

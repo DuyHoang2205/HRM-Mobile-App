@@ -1,85 +1,149 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import '../../../core/auth/auth_helper.dart';
+import '../../../core/helpers/permission_helper.dart';
 import '../data/overtime_repository.dart';
-import '../models/overtime_model.dart';
+import '../models/attendance_record.dart';
+import '../models/employee_item.dart';
+import '../models/leave_record.dart';
+import '../models/overtime_request.dart';
+import '../models/shift_item.dart';
 import 'overtime_event.dart';
 import 'overtime_state.dart';
 
 class OvertimeBloc extends Bloc<OvertimeEvent, OvertimeState> {
   final OvertimeRepository _repository;
 
-  OvertimeBloc({required OvertimeRepository repository})
-    : _repository = repository,
+  OvertimeBloc({OvertimeRepository? repository})
+    : _repository = repository ?? OvertimeRepository(),
       super(const OvertimeState()) {
-    on<LoadOvertimeList>(_onLoadOvertimeList);
-    on<SubmitOvertimeRequest>(_onSubmitOvertimeRequest);
+    on<OvertimeStarted>(_onStarted);
+    on<OvertimeRefreshed>(_onRefreshed);
+    on<OvertimeRequestSubmitted>(_onSubmitted);
   }
 
-  Future<void> _onLoadOvertimeList(
-    LoadOvertimeList event,
+  Future<void> _onStarted(
+    OvertimeStarted event,
     Emitter<OvertimeState> emit,
   ) async {
-    emit(state.copyWith(status: OvertimeStatus.loading));
+    emit(state.copyWith(isLoading: true));
+    await _fetchData(emit);
+  }
+
+  Future<void> _onRefreshed(
+    OvertimeRefreshed event,
+    Emitter<OvertimeState> emit,
+  ) async {
+    await _fetchData(emit);
+  }
+
+  Future<void> _fetchData(Emitter<OvertimeState> emit) async {
     try {
-      final requests = await _repository.fetchOvertimeRequests();
-      emit(state.copyWith(status: OvertimeStatus.success, requests: requests));
-    } catch (e) {
+      final siteId = await AuthHelper.getSiteId();
+      final employeeId = await AuthHelper.getEmployeeId() ?? 0;
+      final now = DateTime.now();
+      // Lấy dữ liệu từ đầu năm đến cuối năm
+      final yearStart = DateTime(now.year, 1, 1);
+      final yearEnd = DateTime(now.year, 12, 31);
+
+      // Check quyền frmOvertime/Add
+      final bool isHR = await PermissionHelper.canAddOvertime();
+
+      // Fetch dữ liệu song song
+      final shiftsFuture = _repository.getOvertimeShifts(siteId);
+
+      final requestsFuture = _repository.getOvertimeRequests(
+        year: now.year,
+        siteID: siteId,
+        employeeId: isHR ? 0 : employeeId,
+      );
+
+      // HR load danh sách nhân viên; Employee load leave+attendance của mình
+      final employeesFuture = isHR
+          ? _repository.getEmployeeList(siteId)
+          : Future.value(<EmployeeItem>[]);
+
+      final leavesFuture = !isHR && employeeId > 0
+          ? _repository.getLeavesByEmployee(
+              siteID: siteId,
+              employeeId: employeeId,
+            )
+          : Future.value(<LeaveRecord>[]);
+
+      final attendanceFuture = !isHR && employeeId > 0
+          ? _repository.getAttendanceByEmployee(
+              siteID: siteId,
+              employeeId: employeeId,
+              fromDate: yearStart,
+              toDate: yearEnd,
+            )
+          : Future.value(<AttendanceRecord>[]);
+
+      // Await tất cả
+      final List<ShiftItem> shifts = await shiftsFuture;
+      final List<OvertimeRequest> requests = await requestsFuture;
+      final List<EmployeeItem> employees = await employeesFuture;
+      final List<LeaveRecord> leaves = isHR
+          ? await _getLeavesForRequests(siteId, requests)
+          : await leavesFuture;
+      final List<AttendanceRecord> attendance = await attendanceFuture;
+
       emit(
         state.copyWith(
-          status: OvertimeStatus.failure,
-          errorMessage: e.toString(),
+          isLoading: false,
+          isHR: isHR,
+          requests: requests,
+          shifts: shifts,
+          employees: employees,
+          leaves: leaves,
+          attendance: attendance,
+          error: null,
         ),
       );
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: e.toString()));
     }
   }
 
-  Future<void> _onSubmitOvertimeRequest(
-    SubmitOvertimeRequest event,
+  Future<List<LeaveRecord>> _getLeavesForRequests(
+    String siteId,
+    List<OvertimeRequest> requests,
+  ) async {
+    final employeeIds = requests
+        .map((r) => r.requestBy)
+        .where((id) => id > 0)
+        .toSet()
+        .toList();
+
+    if (employeeIds.isEmpty) return <LeaveRecord>[];
+
+    final leavesByEmployee = await Future.wait(
+      employeeIds.map(
+        (id) async =>
+            _repository.getLeavesByEmployee(siteID: siteId, employeeId: id),
+      ),
+    );
+
+    return leavesByEmployee.expand((items) => items).toList();
+  }
+
+  Future<void> _onSubmitted(
+    OvertimeRequestSubmitted event,
     Emitter<OvertimeState> emit,
   ) async {
-    emit(state.copyWith(status: OvertimeStatus.submitting));
+    emit(state.copyWith(isSubmitting: true, errorMessage: null));
     try {
-      // Calculate basic total hours for mock logic
-      final startParts = event.startTime.split(':');
-      final endParts = event.endTime.split(':');
-      double totalHrs = 0;
-      if (startParts.length == 2 && endParts.length == 2) {
-        final startMin =
-            int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
-        int endMin = int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
-        if (event.isNextDay) endMin += 24 * 60;
-        totalHrs = (endMin - startMin) / 60.0;
-        if (totalHrs < 0) totalHrs = 0;
-      }
-
-      final newRequest = OvertimeModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        date: event.date,
-        startTime: event.startTime,
-        endTime: event.endTime,
-        totalHours: double.parse(totalHrs.toStringAsFixed(1)),
-        reason: event.reason,
-        description: event.description,
-        isNextDay: event.isNextDay,
-        breakMinutes: event.breakMinutes,
-        reeproDispatch: event.reeproDispatch,
-        reeproProject: event.reeproProject,
-        approverName: 'Phạm Văn D', // Hardcoded approver
-        status: 'Chờ duyệt',
-      );
-
-      await _repository.createOvertimeRequest(newRequest);
-
-      // Emit success and refresh the list
-      emit(state.copyWith(status: OvertimeStatus.submitSuccess));
-      add(const LoadOvertimeList());
-    } catch (e) {
+      await _repository.submitOvertimeRequest(event.request);
       emit(
         state.copyWith(
-          status: OvertimeStatus.submitFailure,
-          errorMessage: e.toString(),
+          isSubmitting: false,
+          submitSuccess: state.isHR
+              ? 'Đã tạo phiếu tăng ca'
+              : 'Gửi yêu cầu thành công',
         ),
       );
+      add(const OvertimeRefreshed());
+    } catch (e) {
+      emit(state.copyWith(isSubmitting: false, errorMessage: e.toString()));
     }
   }
 }

@@ -110,12 +110,14 @@ class _LeaveListView extends StatelessWidget {
   Widget _buildList(BuildContext context, LeaveState state, int tabIndex) {
     // tabIndex: 0 = Tất cả, 1 = Chờ duyệt, 2 = Lịch sử (Đã duyệt/Từ chối)
     final filteredRequests = state.requests.where((req) {
-      if (tabIndex == 1)
+      if (tabIndex == 1) {
         return req.status == 0 || req.status == 1; // 0, 1 thường là chờ duyệt
-      if (tabIndex == 2)
+      }
+      if (tabIndex == 2) {
         return req.status == 2 ||
             req.status == 3 ||
             req.status == 4; // 2, 3 là đã duyệt, 4 là từ chối
+      }
       return true; // tab 0 => show All
     }).toList();
 

@@ -73,6 +73,7 @@ class AuthHelper {
   static const String _kSiteId = 'site_id';
   static const String _kStaffCode = 'staff_code';
   static const String _kFullName = 'full_name';
+  static const String _kUsername = 'username';
 
   static const _storage = FlutterSecureStorage();
 
@@ -96,6 +97,10 @@ class AuthHelper {
       final fullname = payload['admin'];
       if (fullname != null) {
         await _storage.write(key: _kFullName, value: fullname.toString());
+      }
+      final username = payload['username'];
+      if (username != null) {
+        await _storage.write(key: _kUsername, value: username.toString());
       }
     }
   }
@@ -126,6 +131,10 @@ class AuthHelper {
 
   static Future<String?> getFullName() async {
     return await _storage.read(key: _kFullName);
+  }
+
+  static Future<String?> getUserName() async {
+    return await _storage.read(key: _kUsername);
   }
 
   static Future<String?> getAccessToken() async {
