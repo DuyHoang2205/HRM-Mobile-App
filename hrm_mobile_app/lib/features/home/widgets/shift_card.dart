@@ -16,7 +16,7 @@ class ShiftCard extends StatefulWidget {
 class _ShiftCardState extends State<ShiftCard> {
   // Timer removed as we rely on HomeBloc state for time (or we can bring back 10s timer if we want live update of now, but user asked for Checkin Time)
   // Actually, if we want "Vào ca" to show current time, we still need a timer to refresh the UI.
-  // But user said "time was supposed to follow the check in and check out time". 
+  // But user said "time was supposed to follow the check in and check out time".
   // If "Vào ca", I am NOT checked in. So what time? "Giờ hiện tại" (Current Time).
   // So I should keep the timer to refresh UI if not checked in.
 
@@ -45,11 +45,15 @@ class _ShiftCardState extends State<ShiftCard> {
           final isCheckout = state.isCheckoutMode;
 
           final bgColors = isCheckout
-              ? const [Color(0xFFFF3B30), Color(0xFFFF5E57)] 
+              ? const [Color(0xFFFF3B30), Color(0xFFFF5E57)]
               : const [Color(0xFF123F74), Color(0xFF0B2D5B)]; // Blue
 
-          final iconColor = isCheckout ? const Color(0xFFFF3B30) : const Color(0xFF0B2D5B);
-          final shadowColor = isCheckout ? const Color(0xFFFF3B30) : const Color(0xFF0B2D5B);
+          final iconColor = isCheckout
+              ? const Color(0xFFFF3B30)
+              : const Color(0xFF0B2D5B);
+          final shadowColor = isCheckout
+              ? const Color(0xFFFF3B30)
+              : const Color(0xFF0B2D5B);
 
           return Material(
             color: Colors.transparent,
@@ -58,7 +62,10 @@ class _ShiftCardState extends State<ShiftCard> {
               onTap: widget.onTap,
               child: Ink(
                 height: 120,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
                   gradient: LinearGradient(
@@ -82,7 +89,7 @@ class _ShiftCardState extends State<ShiftCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            state.shiftLabel, 
+                            state.shiftLabel,
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
@@ -92,7 +99,8 @@ class _ShiftCardState extends State<ShiftCard> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            state.shiftTime, // Use state time (Check-in time or Current time)
+                            state
+                                .shiftTime, // Use state time (Check-in time or Current time)
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -118,8 +126,8 @@ class _ShiftCardState extends State<ShiftCard> {
                         ],
                       ),
                       child: Icon(
-                        Icons.fingerprint_rounded, 
-                        size: 38, 
+                        Icons.fingerprint_rounded,
+                        size: 38,
                         color: iconColor,
                       ),
                     ),

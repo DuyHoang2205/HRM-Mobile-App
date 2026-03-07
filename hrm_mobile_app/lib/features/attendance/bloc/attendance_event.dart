@@ -28,7 +28,10 @@ class AttendanceCheckResultArrived extends AttendanceEvent {
   final bool isCheckIn;
   final DateTime timestamp;
 
-  const AttendanceCheckResultArrived({required this.isCheckIn, required this.timestamp});
+  const AttendanceCheckResultArrived({
+    required this.isCheckIn,
+    required this.timestamp,
+  });
 
   @override
   List<Object?> get props => [isCheckIn, timestamp];

@@ -62,10 +62,13 @@ class _HomeView extends StatelessWidget {
                               );
 
                               if (context.mounted && result is CheckInResult) {
-                                context.read<HomeBloc>().add(CheckResultArrived(
-                                  timestamp: result.timestamp,
-                                  isCheckIn: result.action == CheckAction.checkIn,
-                                ));
+                                context.read<HomeBloc>().add(
+                                  CheckResultArrived(
+                                    timestamp: result.timestamp,
+                                    isCheckIn:
+                                        result.action == CheckAction.checkIn,
+                                  ),
+                                );
                               }
                             },
                           ),
@@ -74,29 +77,43 @@ class _HomeView extends StatelessWidget {
                             onTap: (action) async {
                               switch (action) {
                                 case FolderAction.attendance:
-                                  final result = await Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const AttendancePage()),
-                                  );
+                                  final result = await Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const AttendancePage(),
+                                        ),
+                                      );
 
                                   if (context.mounted) {
                                     if (result is CheckInResult) {
-                                      context.read<HomeBloc>().add(CheckResultArrived(
-                                        timestamp: result.timestamp,
-                                        isCheckIn: result.action == CheckAction.checkIn,
-                                      ));
+                                      context.read<HomeBloc>().add(
+                                        CheckResultArrived(
+                                          timestamp: result.timestamp,
+                                          isCheckIn:
+                                              result.action ==
+                                              CheckAction.checkIn,
+                                        ),
+                                      );
                                     } else {
-                                      context.read<HomeBloc>().add(const AttendanceLogsRequested());
+                                      context.read<HomeBloc>().add(
+                                        const AttendanceLogsRequested(),
+                                      );
                                     }
                                   }
                                   break;
                                 case FolderAction.overtime:
                                   Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const OvertimeListPage()),
+                                    MaterialPageRoute(
+                                      builder: (_) => const OvertimeListPage(),
+                                    ),
                                   );
                                   break;
                                 case FolderAction.leave:
                                   Navigator.of(context).push(
-                                    MaterialPageRoute(builder: (_) => const LeaveListPage()),
+                                    MaterialPageRoute(
+                                      builder: (_) => const LeaveListPage(),
+                                    ),
                                   );
                                   break;
                                 default:

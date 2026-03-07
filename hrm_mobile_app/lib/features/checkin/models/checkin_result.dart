@@ -4,8 +4,5 @@ class CheckInResult {
   final CheckAction action;
   final DateTime timestamp;
 
-  const CheckInResult({
-    required this.action,
-    required this.timestamp,
-  });
+  const CheckInResult({required this.action, required this.timestamp});
 }

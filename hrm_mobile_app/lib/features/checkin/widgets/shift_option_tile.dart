@@ -20,14 +20,17 @@ class ShiftOptionTile extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () => context.read<CheckInBloc>().add(ShiftSelected(option.id)),
+            onTap: () =>
+                context.read<CheckInBloc>().add(ShiftSelected(option.id)),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: selected ? const Color(0xFF00C389) : const Color(0x11000000),
+                  color: selected
+                      ? const Color(0xFF00C389)
+                      : const Color(0x11000000),
                   width: selected ? 2 : 1,
                 ),
               ),
@@ -39,7 +42,9 @@ class ShiftOptionTile extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: selected ? const Color(0xFF00C389) : const Color(0xFF9AA6B2),
+                        color: selected
+                            ? const Color(0xFF00C389)
+                            : const Color(0xFF9AA6B2),
                         width: 2,
                       ),
                     ),

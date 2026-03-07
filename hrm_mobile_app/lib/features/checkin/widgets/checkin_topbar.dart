@@ -4,11 +4,7 @@ class CheckInTopBar extends StatelessWidget {
   final String title;
   final VoidCallback onClose;
 
-  const CheckInTopBar({
-    super.key,
-    required this.title,
-    required this.onClose,
-  });
+  const CheckInTopBar({super.key, required this.title, required this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +23,9 @@ class CheckInTopBar extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 56), // left spacer to balance the close button
+                const SizedBox(
+                  width: 56,
+                ), // left spacer to balance the close button
                 Expanded(
                   child: Center(
                     child: Text(
@@ -51,8 +49,11 @@ class CheckInTopBar extends StatelessWidget {
                       child: const SizedBox(
                         width: 36,
                         height: 36,
-                        child: Icon(Icons.close,
-                            size: 22, color: Color(0xFF9AA6B2)),
+                        child: Icon(
+                          Icons.close,
+                          size: 22,
+                          color: Color(0xFF9AA6B2),
+                        ),
                       ),
                     ),
                   ),

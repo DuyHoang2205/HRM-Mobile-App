@@ -23,13 +23,13 @@ class HomeState {
   });
 
   factory HomeState.initial() => HomeState(
-        attendanceLogs: [],
-        isLoading: false,
-        today: DateTime.now(),
-        name: "Trung Nguyen", 
-        role: "Giám đốc",
-        initials: "TN",
-      );
+    attendanceLogs: [],
+    isLoading: false,
+    today: DateTime.now(),
+    name: "Trung Nguyen",
+    role: "Giám đốc",
+    initials: "TN",
+  );
 
   bool get isCheckoutMode => checkedInAt != null && checkedOutAt == null;
 
@@ -57,7 +57,7 @@ class HomeState {
   }) {
     return HomeState(
       attendanceLogs: attendanceLogs ?? this.attendanceLogs,
-      checkedInAt: checkedInAt, 
+      checkedInAt: checkedInAt,
       checkedOutAt: checkedOutAt,
       isLoading: isLoading ?? this.isLoading,
       today: today ?? this.today,

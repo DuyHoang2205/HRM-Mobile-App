@@ -5,7 +5,8 @@ import 'models/location.dart';
 class LocationRepository {
   final DioClient _dioClient;
 
-  LocationRepository({DioClient? dioClient}) : _dioClient = dioClient ?? DioClient();
+  LocationRepository({DioClient? dioClient})
+    : _dioClient = dioClient ?? DioClient();
 
   Future<List<Location>> getLocations(List<String> siteIds) async {
     final allLocations = <Location>[];

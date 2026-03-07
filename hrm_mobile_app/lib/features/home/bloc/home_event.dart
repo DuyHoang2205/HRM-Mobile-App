@@ -35,4 +35,5 @@ class CheckResultArrived extends HomeEvent {
 }
 
 class NotificationTapped extends HomeEvent {}
+
 class CheckInTapped extends HomeEvent {}

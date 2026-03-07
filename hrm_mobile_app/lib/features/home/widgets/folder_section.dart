@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class FolderSection extends StatelessWidget {
   final void Function(FolderAction action) onTap;
 
-  const FolderSection({
-    super.key,
-    required this.onTap,
-  });
+  const FolderSection({super.key, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -97,10 +94,10 @@ class _FolderData {
   }) : isEmpty = false;
 
   const _FolderData.empty()
-      : title = null,
-        icon = null,
-        action = null,
-        isEmpty = true;
+    : title = null,
+      icon = null,
+      action = null,
+      isEmpty = true;
 }
 
 class _FolderTile extends StatelessWidget {

@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../logic/bloc/login/login_bloc.dart';
-import '../../../logic/bloc/login/login_event.dart';
-import '../../../logic/bloc/login/login_state.dart';
+import '../bloc/login_bloc.dart';
+import '../bloc/login_event.dart';
+import '../bloc/login_state.dart';
 import '../../../app/app_shell.dart';
+
+class _LoginUiConstants {
+  static const double horizontalPadding = 24;
+  static const double inputSpacing = 16;
+  static const double sectionSpacing = 32;
+  static const double titleSize = 28;
+  static const double subtitleSize = 16;
+  static const double buttonVerticalPadding = 16;
+  static const Color pageBackground = Color(0xFFF6F7FB);
+  static const Color primary = Color(0xFF0B2A5B);
+  static const Color heading = Color(0xFF0B1B2B);
+  static const Color subtitle = Color(0xFF9AA6B2);
+}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,8 +43,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (username.isNotEmpty && password.isNotEmpty) {
       blocContext.read<LoginBloc>().add(
-            LoginSubmitted(username: username, password: password),
-          );
+        LoginSubmitted(username: username, password: password),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter username and password')),
@@ -44,10 +57,12 @@ class _LoginScreenState extends State<LoginScreen> {
     return BlocProvider(
       create: (context) => LoginBloc(),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F7FB),
+        backgroundColor: _LoginUiConstants.pageBackground,
         body: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: _LoginUiConstants.horizontalPadding,
+            ),
             child: BlocConsumer<LoginBloc, LoginState>(
               listener: (context, state) {
                 if (state.status == LoginStatus.success) {
@@ -65,104 +80,23 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               builder: (context, state) {
                 return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 60),
-                    const Icon(
-                      Icons.lock_outline,
-                      size: 80,
-                      color: Color(0xFF0B2A5B),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Chào Mừng',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0B1B2B),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Đăng Nhập',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF9AA6B2),
-                      ),
-                    ),
+                    const _LoginHeader(),
                     const SizedBox(height: 48),
-                    TextField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        labelText: 'Tên Đăng Nhập',
-                        prefixIcon: const Icon(Icons.person_outline),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      textInputAction: TextInputAction.next,
+                    _CredentialsSection(
+                      usernameController: _usernameController,
+                      passwordController: _passwordController,
+                      obscurePassword: _obscurePassword,
+                      onTogglePasswordVisibility: () {
+                        setState(() => _obscurePassword = !_obscurePassword);
+                      },
+                      onSubmit: () => _onLoginPressed(context),
                     ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: 'Mật Khẩu',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                      ),
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _onLoginPressed(context),
-                    ),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed:
-                          state.status == LoginStatus.loading ? null : () => _onLoginPressed(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0B2A5B),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: state.status == LoginStatus.loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              'Đăng Nhập',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
+                    const SizedBox(height: _LoginUiConstants.sectionSpacing),
+                    _LoginButton(
+                      isLoading: state.status == LoginStatus.loading,
+                      onPressed: () => _onLoginPressed(context),
                     ),
                   ],
                 );
@@ -171,6 +105,160 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LoginHeader extends StatelessWidget {
+  const _LoginHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        SizedBox(height: 60),
+        Icon(Icons.lock_outline, size: 80, color: _LoginUiConstants.primary),
+        SizedBox(height: 24),
+        Text(
+          'Chào Mừng',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: _LoginUiConstants.titleSize,
+            fontWeight: FontWeight.bold,
+            color: _LoginUiConstants.heading,
+          ),
+        ),
+        SizedBox(height: 8),
+        Text(
+          'Đăng Nhập',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: _LoginUiConstants.subtitleSize,
+            color: _LoginUiConstants.subtitle,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CredentialsSection extends StatelessWidget {
+  const _CredentialsSection({
+    required this.usernameController,
+    required this.passwordController,
+    required this.obscurePassword,
+    required this.onTogglePasswordVisibility,
+    required this.onSubmit,
+  });
+
+  final TextEditingController usernameController;
+  final TextEditingController passwordController;
+  final bool obscurePassword;
+  final VoidCallback onTogglePasswordVisibility;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _LoginInputField(
+          controller: usernameController,
+          labelText: 'Tên Đăng Nhập',
+          prefixIcon: const Icon(Icons.person_outline),
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: _LoginUiConstants.inputSpacing),
+        _LoginInputField(
+          controller: passwordController,
+          labelText: 'Mật Khẩu',
+          prefixIcon: const Icon(Icons.lock_outline),
+          obscureText: obscurePassword,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => onSubmit(),
+          suffixIcon: IconButton(
+            icon: Icon(
+              obscurePassword ? Icons.visibility_off : Icons.visibility,
+            ),
+            onPressed: onTogglePasswordVisibility,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LoginInputField extends StatelessWidget {
+  const _LoginInputField({
+    required this.controller,
+    required this.labelText,
+    required this.prefixIcon,
+    this.suffixIcon,
+    this.obscureText = false,
+    this.textInputAction,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String labelText;
+  final Widget prefixIcon;
+  final Widget? suffixIcon;
+  final bool obscureText;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      textInputAction: textInputAction,
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: prefixIcon,
+        suffixIcon: suffixIcon,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+}
+
+class _LoginButton extends StatelessWidget {
+  const _LoginButton({required this.isLoading, required this.onPressed});
+
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _LoginUiConstants.primary,
+        padding: const EdgeInsets.symmetric(
+          vertical: _LoginUiConstants.buttonVerticalPadding,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            )
+          : const Text(
+              'Đăng Nhập',
+              style: TextStyle(
+                fontSize: _LoginUiConstants.subtitleSize,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
     );
   }
 }

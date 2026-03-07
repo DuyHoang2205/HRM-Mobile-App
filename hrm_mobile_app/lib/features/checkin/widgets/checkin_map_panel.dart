@@ -37,7 +37,9 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
                 p.currentLongitude != c.currentLongitude ||
                 p.isRefreshingLocation != c.isRefreshingLocation,
             listener: (context, state) {
-              if (state.currentLatitude != null && state.currentLongitude != null && _isMapReady) {
+              if (state.currentLatitude != null &&
+                  state.currentLongitude != null &&
+                  _isMapReady) {
                 // Move map to user if it's the first fix or user requests refresh
                 if (!_hasMovedOnce || state.isRefreshingLocation) {
                   _mapController.move(
@@ -49,20 +51,27 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
               }
             },
             builder: (context, state) {
-              if (state.currentLatitude == null || state.currentLongitude == null) {
+              if (state.currentLatitude == null ||
+                  state.currentLongitude == null) {
                 return const Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircularProgressIndicator(strokeWidth: 2),
                       SizedBox(height: 8),
-                      Text('Đang lấy vị trí...', style: TextStyle(color: Colors.grey)),
+                      Text(
+                        'Đang lấy vị trí...',
+                        style: TextStyle(color: Colors.grey),
+                      ),
                     ],
                   ),
                 );
               }
 
-              final userPos = LatLng(state.currentLatitude!, state.currentLongitude!);
+              final userPos = LatLng(
+                state.currentLatitude!,
+                state.currentLongitude!,
+              );
 
               return FlutterMap(
                 mapController: _mapController,
@@ -71,20 +80,22 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
                   initialZoom: 16.0,
                   interactionOptions: const InteractionOptions(
                     // Disable rotation for simpler UX
-                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate, 
+                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
                   onMapReady: () {
                     _isMapReady = true;
                     if (!_hasMovedOnce) {
-                       _mapController.move(userPos, 16.0);
-                       _hasMovedOnce = true;
+                      _mapController.move(userPos, 16.0);
+                      _hasMovedOnce = true;
                     }
                   },
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.dpt.hrm_app', // Generic package name
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName:
+                        'com.dpt.hrm_app', // Generic package name
                   ),
                   MarkerLayer(
                     markers: [
@@ -94,7 +105,9 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
                         height: 60,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00C389).withValues(alpha: 0.2),
+                            color: const Color(
+                              0xFF00C389,
+                            ).withValues(alpha: 0.2),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -114,17 +127,18 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
           ),
 
           // OVERLAY BUTTONS
-          
+
           // Privacy pill (left)
           Positioned(
             left: 14,
             bottom: 14,
             child: _PillButton(
               label: 'Quyền riêng tư',
-              onTap: () => context.read<CheckInBloc>().add(const PrivacyPressed()),
+              onTap: () =>
+                  context.read<CheckInBloc>().add(const PrivacyPressed()),
               textColor: const Color(0xFF1976D2),
               icon: Icons.open_in_new,
-              showIcon: false, 
+              showIcon: false,
             ),
           ),
 
@@ -133,11 +147,16 @@ class _CheckInMapPanelState extends State<CheckInMapPanel> {
             right: 14,
             bottom: 14,
             child: BlocBuilder<CheckInBloc, CheckInState>(
-              buildWhen: (p, c) => p.isRefreshingLocation != c.isRefreshingLocation,
+              buildWhen: (p, c) =>
+                  p.isRefreshingLocation != c.isRefreshingLocation,
               builder: (_, state) {
                 return _PillButton(
-                  label: state.isRefreshingLocation ? 'Đang làm mới...' : 'Làm mới vị trí',
-                  onTap: () => context.read<CheckInBloc>().add(const RefreshLocationPressed()),
+                  label: state.isRefreshingLocation
+                      ? 'Đang làm mới...'
+                      : 'Làm mới vị trí',
+                  onTap: () => context.read<CheckInBloc>().add(
+                    const RefreshLocationPressed(),
+                  ),
                   textColor: const Color(0xFF00C389),
                   icon: Icons.refresh,
                   showIcon: true,

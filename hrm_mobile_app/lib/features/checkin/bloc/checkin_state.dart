@@ -89,11 +89,7 @@ class CheckInState extends Equatable {
           ? 'Bạn đang trong ca làm. Xác nhận để ra ca.'
           : 'Hiện tại bạn chưa có Ca làm. Bạn có muốn tiếp tục vào ca cá nhân?',
       options: [
-        ShiftOption(
-          id: 'personal',
-          title: 'Ca Cá Nhân',
-          timeRange: range,
-        ),
+        ShiftOption(id: 'personal', title: 'Ca Cá Nhân', timeRange: range),
       ],
       selectedShiftId: 'personal',
       isRefreshingLocation: false,
@@ -158,27 +154,27 @@ class CheckInState extends Equatable {
 
   @override
   List<Object?> get props => [
-        initials,
-        wifiName,
-        bssid,
-        wifiLabelRight,
-        isCheckoutMode,
-        checkedInAt?.millisecondsSinceEpoch,
-        warning,
-        options,
-        selectedShiftId,
-        isRefreshingLocation,
-        isConfirming,
-        isValidLocation,
-        isValidWifi,
-        locationId,
-        locationName,
-        currentLatitude,
-        currentLongitude,
-        successMessage,
-        errorMessage,
-        actionTimestamp?.millisecondsSinceEpoch,
-      ];
+    initials,
+    wifiName,
+    bssid,
+    wifiLabelRight,
+    isCheckoutMode,
+    checkedInAt?.millisecondsSinceEpoch,
+    warning,
+    options,
+    selectedShiftId,
+    isRefreshingLocation,
+    isConfirming,
+    isValidLocation,
+    isValidWifi,
+    locationId,
+    locationName,
+    currentLatitude,
+    currentLongitude,
+    successMessage,
+    errorMessage,
+    actionTimestamp?.millisecondsSinceEpoch,
+  ];
 }
 
 String _fmtHHmm(DateTime dt) {

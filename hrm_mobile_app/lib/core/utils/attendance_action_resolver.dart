@@ -4,7 +4,7 @@ class AttendanceActionResolver {
   static List<AttendanceLog> resolve(List<AttendanceLog> logs) {
     if (logs.isEmpty) return [];
 
-    // 1. Deduplicate by ID and Timestamp to prevent double-counting 
+    // 1. Deduplicate by ID and Timestamp to prevent double-counting
     // from the two API calls in HomeBloc
     final Map<String, AttendanceLog> uniqueLogs = {};
     for (var log in logs) {
@@ -18,7 +18,8 @@ class AttendanceActionResolver {
     // 2. Group by Date
     final Map<String, List<AttendanceLog>> grouped = {};
     for (var log in sorted) {
-      final key = "${log.timestamp.year}-${log.timestamp.month}-${log.timestamp.day}";
+      final key =
+          "${log.timestamp.year}-${log.timestamp.month}-${log.timestamp.day}";
       grouped.putIfAbsent(key, () => []).add(log);
     }
 
@@ -37,9 +38,11 @@ class AttendanceActionResolver {
           action = AttendanceAction.checkOut;
         } else {
           // If no direction, index 0 is In, index 1 is Out, etc.
-          action = (i % 2 == 0) ? AttendanceAction.checkIn : AttendanceAction.checkOut;
+          action = (i % 2 == 0)
+              ? AttendanceAction.checkIn
+              : AttendanceAction.checkOut;
         }
-        
+
         resolved.add(log.copyWith(action: action));
       }
     });

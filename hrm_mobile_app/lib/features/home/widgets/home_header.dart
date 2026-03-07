@@ -107,7 +107,7 @@ class HomeHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Logout button Section
               InkWell(
                 borderRadius: BorderRadius.circular(24),

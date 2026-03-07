@@ -499,6 +499,9 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
   }
 
   Future<void> _submit() async {
+    final bloc = context.read<OvertimeBloc>();
+    final isHR = bloc.state.isHR;
+
     if (!_formKey.currentState!.validate()) return;
     if (_fromDate == null || _toDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -523,8 +526,6 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
     final staffCode = await AuthHelper.getStaffCode() ?? '';
 
     // HR giao cho nhân viên được chọn; nhân viên tự gửi cho mình
-    final bloc = context.read<OvertimeBloc>();
-    final isHR = bloc.state.isHR;
     final requestBy = isHR
         ? (_selectedEmployeeId ?? 0)
         : (await AuthHelper.getEmployeeId() ?? 0);
@@ -722,7 +723,7 @@ class _EmployeeSearchSheetState extends State<_EmployeeSearchSheet> {
                   )
                 : ListView.separated(
                     itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (ctx, i) {
                       final e = _filtered[i];
                       final isSelected = e.id == widget.initialId;

@@ -26,7 +26,8 @@ class AttendanceState extends Equatable {
   }
 
   // Helper to determine if we are currently checked in based on newest log
-  bool get isCheckedIn => logs.isNotEmpty && logs.first.action == AttendanceAction.checkIn;
+  bool get isCheckedIn =>
+      logs.isNotEmpty && logs.first.action == AttendanceAction.checkIn;
 
   AttendanceState copyWith({
     List<AttendanceLog>? logs,

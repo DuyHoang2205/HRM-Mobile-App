@@ -1,9 +1,7 @@
 import 'package:flutter/foundation.dart';
+
 class AttendanceTimeParser {
-  static DateTime parseDateTime({
-    required dynamic date,
-    dynamic time,
-  }) {
+  static DateTime parseDateTime({required dynamic date, dynamic time}) {
     // 1. Handle null safety
     if (date == null) throw const FormatException('AuthDate is null');
 
@@ -12,8 +10,8 @@ class AttendanceTimeParser {
     // CASE 1: Full ISO string (e.g., 2026-02-06T00:05:22.243Z)
     if (dateStr.contains('T')) {
       DateTime parsed = DateTime.parse(dateStr);
-      
-      // We add 14 hours because your server is sending 00:05 
+
+      // We add 14 hours because your server is sending 00:05
       // when it is actually 14:05 in Vietnam.
       DateTime shifted = parsed.add(const Duration(hours: 14));
 
@@ -21,8 +19,8 @@ class AttendanceTimeParser {
       debugPrint('RAW FROM SERVER: $dateStr');
       debugPrint('FIXED RESULT (+14h): $shifted');
       debugPrint('----------------------');
-      
-      return shifted; 
+
+      return shifted;
     }
 
     // CASE 2: Split Date and Time strings (Fallback)

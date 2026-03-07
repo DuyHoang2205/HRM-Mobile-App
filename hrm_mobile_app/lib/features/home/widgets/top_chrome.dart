@@ -11,9 +11,9 @@ class TopChrome extends StatelessWidget {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
-        // Ensures the status bar icons (clock, battery) are clearly visible 
+        // Ensures the status bar icons (clock, battery) are clearly visible
         // against the white notch area on iOS/Android.
-        statusBarBrightness: Brightness.light, 
+        statusBarBrightness: Brightness.light,
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Column(
@@ -27,7 +27,7 @@ class TopChrome extends StatelessWidget {
           ),
 
           // Block 2: HomeHeader
-          // This contains the user profile and notification bell. 
+          // This contains the user profile and notification bell.
           // Ensure that HomeHeader only navigates to functional demo pages.
           const HomeHeader(),
         ],

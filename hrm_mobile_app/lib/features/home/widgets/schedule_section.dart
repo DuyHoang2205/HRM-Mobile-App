@@ -8,14 +8,22 @@ class ScheduleSection extends StatelessWidget {
 
   String _dowViShort(int weekday) {
     switch (weekday) {
-      case 1: return 'T2';
-      case 2: return 'T3';
-      case 3: return 'T4';
-      case 4: return 'T5';
-      case 5: return 'T6';
-      case 6: return 'T7';
-      case 7: return 'CN';
-      default: return '';
+      case 1:
+        return 'T2';
+      case 2:
+        return 'T3';
+      case 3:
+        return 'T4';
+      case 4:
+        return 'T5';
+      case 5:
+        return 'T6';
+      case 6:
+        return 'T7';
+      case 7:
+        return 'CN';
+      default:
+        return '';
     }
   }
 
@@ -32,11 +40,7 @@ class ScheduleSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Text('Lịch làm việc', style: titleStyle,),
-            ],
-          ),
+          Row(children: const [Text('Lịch làm việc', style: titleStyle)]),
           const SizedBox(height: 14),
 
           BlocBuilder<HomeBloc, HomeState>(
@@ -51,16 +55,20 @@ class ScheduleSection extends StatelessWidget {
               // 1. FIXED WEEK LOGIC: Calculate Monday of the current week
               // DateTime.monday is 1. If today is Friday (5), we subtract 4 days.
               final int daysToSubtract = now.weekday - DateTime.monday;
-              final DateTime startOfWeek = DateTime(now.year, now.month, now.day)
-                  .subtract(Duration(days: daysToSubtract));
+              final DateTime startOfWeek = DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).subtract(Duration(days: daysToSubtract));
 
               // 2. Create attendance lookup set
               final datesWithAttendance = <String>{};
               for (final log in state.attendanceLogs) {
-                final dateKey = '${log.timestamp.year}-${log.timestamp.month}-${log.timestamp.day}';
+                final dateKey =
+                    '${log.timestamp.year}-${log.timestamp.month}-${log.timestamp.day}';
                 datesWithAttendance.add(dateKey);
               }
-              
+
               return LayoutBuilder(
                 builder: (context, constraints) {
                   const gap = 10.0;
@@ -77,12 +85,16 @@ class ScheduleSection extends StatelessWidget {
                         final day = date.day.toString();
 
                         // 3. Highlight logic: Compare rendered date with actual today
-                        final bool isToday = date.day == now.day && 
-                                           date.month == now.month && 
-                                           date.year == now.year;
-                        
-                        final dateKey = '${date.year}-${date.month}-${date.day}';
-                        final hasAttendance = datesWithAttendance.contains(dateKey);
+                        final bool isToday =
+                            date.day == now.day &&
+                            date.month == now.month &&
+                            date.year == now.year;
+
+                        final dateKey =
+                            '${date.year}-${date.month}-${date.day}';
+                        final hasAttendance = datesWithAttendance.contains(
+                          dateKey,
+                        );
 
                         return Padding(
                           padding: EdgeInsets.only(right: i == 6 ? 0 : gap),
@@ -149,7 +161,7 @@ class _StaticDateChip extends StatelessWidget {
                   color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
-                )
+                ),
               ],
       ),
       child: Column(

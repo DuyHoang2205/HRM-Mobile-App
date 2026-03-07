@@ -9,7 +9,9 @@ class WifiInfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CheckInBloc, CheckInState>(
-      buildWhen: (p, c) => p.isValidLocation != c.isValidLocation || p.locationName != c.locationName,
+      buildWhen: (p, c) =>
+          p.isValidLocation != c.isValidLocation ||
+          p.locationName != c.locationName,
       builder: (_, state) {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -24,12 +26,9 @@ class WifiInfoCard extends StatelessWidget {
               ),
             ],
           ),
-            child: Row(
+          child: Row(
             children: [
-              Icon(
-                Icons.wifi,
-                color: const Color(0xFF00C389),
-              ),
+              Icon(Icons.wifi, color: const Color(0xFF00C389)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -54,7 +53,9 @@ class WifiInfoCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: state.isValidLocation ? const Color(0xFF0B1B2B) : const Color(0xFFFF3B30),
+                      color: state.isValidLocation
+                          ? const Color(0xFF0B1B2B)
+                          : const Color(0xFFFF3B30),
                     ),
                   ),
                 ],
