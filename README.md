@@ -1,91 +1,90 @@
 # HRM-Mobile-App
 
-## Frontend Structure
+Monorepo workspace for the Flutter mobile client and related backend resources.
+
+## Workspace Layout
+
+```text
+HRM-Mobile-App/
+├── hrm_mobile_app/          # Flutter app
+└── README.md                # This file
 ```
+
+## Flutter App (`hrm_mobile_app`)
+
+### Current Frontend Structure
+
+```text
 lib/
-├── app
-│  ├── app_shell.dart
-│  └── app.dart
-├── core
-│  ├── demo
-│  │  └── demo_attendance_store.dart
-│  └── widgets
-│     └── placeholder_page.dart
-├── features
-│  ├── attendance
-│  │  ├── bloc
-│  │  │  ├── attendance_bloc.dart
-│  │  │  ├── attendance_event.dart
-│  │  │  └── attendance_state.dart
-│  │  ├── models
-│  │  │  └── attendance_log.dart
-│  │  └── view
-│  │     └── attendance_page.dart
-│  ├── checkin
-│  │  ├── bloc
-│  │  │  ├── checkin_bloc.dart
-│  │  │  ├── checkin_event.dart
-│  │  │  └── checkin_state.dart
-│  │  ├── models
-│  │  │  └── checkin_result.dart
-│  │  ├── view
-│  │  │  └── checkin_page.dart
-│  │  └── widgets
-│  │     ├── checkin_map_panel.dart
-│  │     ├── checkin_topbar.dart
-│  │     ├── confirm_button.dart
-│  │     ├── shift_option_tile.dart
-│  │     └── wifi_info_card.dart
-│  └── home
-│     ├── bloc
-│     │  ├── home_bloc.dart
-│     │  ├── home_event.dart
-│     │  └── home_state.dart
-│     ├── models
-│     │  └── folder_item.dart
-│     ├── view
-│     │  └── home_page.dart
-│     └── widgets
-│        ├── folder_section.dart
-│        ├── home_header.dart
-│        ├── home_tab.dart
-│        ├── schedule_section.dart
-│        ├── shift_card.dart
-│        └── top_chrome.dart
+├── app/
+│   ├── app_shell.dart
+│   └── theme/
+│       └── app_theme.dart
+├── core/
+│   ├── auth/
+│   ├── helpers/
+│   ├── network/
+│   ├── utils/
+│   └── widgets/
+├── features/
+│   ├── attendance/
+│   ├── auth/
+│   │   ├── bloc/
+│   │   ├── data/
+│   │   ├── models/
+│   │   ├── view/
+│   │   └── widgets/
+│   ├── checkin/
+│   ├── home/
+│   ├── leave/
+│   └── overtime/
 └── main.dart
 ```
 
-## Navigation flow:
-```
-main.dart
-   ↓
-AppShell (Scaffold + BottomAppBar + FAB)
-   ↓
-IndexedStack (Home / My Task / Payment / Profile)
+### Architecture Notes
 
-```
-## Entry point:
-bash
-```
-void main() {
-  runApp(const MyApp());
-}
-```
-```
-home: AppShell(),
+- Feature-first organization with layer split inside each feature (`bloc`, `data`, `models`, `view`, `widgets`).
+- API calls are handled in repository/data layer; UI consumes typed state/models.
+- Global network client is in `lib/core/network/dio_client.dart`.
+- App theme is centralized at `lib/app/theme/app_theme.dart`.
+
+### Key Flows (recently updated)
+
+- **Permission-based Overtime UI**
+  - `frmOvertime/Add` is resolved via backend endpoint `POST userRole/getRoleByUser`.
+  - Permission cache now keys by `formName + username + site` to avoid stale cross-account/site results.
+- **Overtime Status Derivation**
+  - Leave records now parse both lowercase/uppercase backend fields (`status/Status`, `fromDate/FromDate`, etc.).
+  - HR/Admin overtime view now loads leave data per employee in overtime list, so "Nghỉ phép" is shown consistently.
+
+## Run the App
+
+From `HRM-Mobile-App/hrm_mobile_app`:
+
+```bash
+flutter pub get
+flutter run
 ```
 
-## Path: features/attendance
-Notes:
-Attendance logs are currently stored using core/demo/demo_attendance_store.dart.
-Replace demo store with API/data layer later without changing UI structure too much.
+## Quality Checks
 
-## Bloc Pattern:
-Each feature uses:
-bloc/: *_bloc.dart, *_event.dart, *_state.dart
-models/: domain models
-view/: pages
-widgets/: feature UI components
-Notes:
-Keep business logic inside blocs.
-Keep views thin; pass actions into bloc events.
+From `HRM-Mobile-App/hrm_mobile_app`:
+
+```bash
+dart format lib
+dart analyze
+```
+
+## Frontend Clean Guide
+
+Project guideline and prompt templates:
+
+- `hrm_mobile_app/docs/frontend_clean_guide.md`
+
+Includes:
+
+- target folder structure
+- UI refactor prompt
+- logic/state cleanup prompt
+- form/validation cleanup prompt
+- clean frontend checklist for HRM
