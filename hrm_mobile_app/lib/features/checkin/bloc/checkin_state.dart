@@ -17,6 +17,19 @@ class ShiftOption extends Equatable {
   List<Object?> get props => [id, title, timeRange, rawToTime];
 }
 
+class WordReasonOption extends Equatable {
+  final String code;
+  final String name;
+
+  const WordReasonOption({
+    required this.code,
+    required this.name,
+  });
+
+  @override
+  List<Object?> get props => [code, name];
+}
+
 class CheckInState extends Equatable {
   final String initials;
 
@@ -32,6 +45,8 @@ class CheckInState extends Equatable {
   final List<ShiftOption> options;
   final String? selectedShiftId;
 
+  final List<WordReasonOption> wordReasons;
+
   final bool isRefreshingLocation;
   final bool isConfirming;
 
@@ -45,6 +60,7 @@ class CheckInState extends Equatable {
   // NEW: success flow
   final String? successMessage;
   final String? errorMessage;
+  final String? earlyCheckoutWarningMessage;
   final DateTime? actionTimestamp;
 
   // NEW: early check-out validation
@@ -60,6 +76,7 @@ class CheckInState extends Equatable {
     required this.warning,
     required this.options,
     required this.selectedShiftId,
+    required this.wordReasons,
     required this.isRefreshingLocation,
     required this.isConfirming,
     required this.isValidLocation,
@@ -70,6 +87,7 @@ class CheckInState extends Equatable {
     required this.currentLongitude,
     required this.successMessage,
     required this.errorMessage,
+    required this.earlyCheckoutWarningMessage,
     required this.actionTimestamp,
     required this.shiftEndTime,
   });
@@ -98,6 +116,7 @@ class CheckInState extends Equatable {
         ShiftOption(id: 'personal', title: 'Ca Cá Nhân', timeRange: range),
       ],
       selectedShiftId: 'personal',
+      wordReasons: const [],
       isRefreshingLocation: false,
       isConfirming: false,
       isValidLocation: false,
@@ -108,6 +127,7 @@ class CheckInState extends Equatable {
       currentLongitude: null,
       successMessage: null,
       errorMessage: null,
+      earlyCheckoutWarningMessage: null,
       actionTimestamp: null,
       shiftEndTime: null,
     );
@@ -123,6 +143,7 @@ class CheckInState extends Equatable {
     String? warning,
     List<ShiftOption>? options,
     String? selectedShiftId,
+    List<WordReasonOption>? wordReasons,
     bool? isRefreshingLocation,
     bool? isConfirming,
     bool? isValidLocation,
@@ -133,6 +154,7 @@ class CheckInState extends Equatable {
     double? currentLongitude,
     String? successMessage,
     String? errorMessage,
+    String? earlyCheckoutWarningMessage,
     DateTime? actionTimestamp,
     DateTime? shiftEndTime,
   }) {
@@ -146,6 +168,7 @@ class CheckInState extends Equatable {
       warning: warning ?? this.warning,
       options: options ?? this.options,
       selectedShiftId: selectedShiftId ?? this.selectedShiftId,
+      wordReasons: wordReasons ?? this.wordReasons,
       isRefreshingLocation: isRefreshingLocation ?? this.isRefreshingLocation,
       isConfirming: isConfirming ?? this.isConfirming,
       isValidLocation: isValidLocation ?? this.isValidLocation,
@@ -156,6 +179,7 @@ class CheckInState extends Equatable {
       currentLongitude: currentLongitude ?? this.currentLongitude,
       successMessage: successMessage,
       errorMessage: errorMessage,
+      earlyCheckoutWarningMessage: earlyCheckoutWarningMessage,
       actionTimestamp: actionTimestamp ?? this.actionTimestamp,
       shiftEndTime: shiftEndTime ?? this.shiftEndTime,
     );
@@ -172,6 +196,7 @@ class CheckInState extends Equatable {
     warning,
     options,
     selectedShiftId,
+    wordReasons,
     isRefreshingLocation,
     isConfirming,
     isValidLocation,
@@ -182,6 +207,7 @@ class CheckInState extends Equatable {
     currentLongitude,
     successMessage,
     errorMessage,
+    earlyCheckoutWarningMessage,
     actionTimestamp?.millisecondsSinceEpoch,
     shiftEndTime?.millisecondsSinceEpoch,
   ];

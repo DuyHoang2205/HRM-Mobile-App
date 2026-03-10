@@ -50,6 +50,100 @@ class _CheckInView extends StatelessWidget {
     );
   }
 
+  Future<void> _showEarlyCheckoutDialog(BuildContext context, String msg) async {
+    final noteController = TextEditingController();
+    final bloc = context.read<CheckInBloc>();
+    final wordReasons = bloc.state.wordReasons;
+    String? selectedReasonCode = wordReasons.isNotEmpty ? wordReasons.first.code : null;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Cảnh Báo Ra Ca Sớm', style: TextStyle(color: Colors.red)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(msg),
+                  const SizedBox(height: 16),
+                  if (wordReasons.isNotEmpty) ...[
+                    const Text('Lý do:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: selectedReasonCode,
+                          items: wordReasons.map((r) => DropdownMenuItem(
+                                value: r.code,
+                                child: Text(r.name),
+                              )).toList(),
+                          onChanged: (val) {
+                            setState(() {
+                              selectedReasonCode = val;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  const Text('Ghi chú chi tiết:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: noteController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      hintText: 'Nhập ghi chú (tùy chọn)...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Cần chọn Reason Code, nếu List rỗng thì bắt buộc nhập tay note
+                    if (selectedReasonCode == null && noteController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vui lòng chọn lý do hoặc nhập ghi chú giải trình!')),
+                      );
+                      return;
+                    }
+                    Navigator.of(context).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text('Vẫn Ra Ca', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+
+    if (confirmed == true && context.mounted) {
+      bloc.add(ConfirmPressed(
+        force: true, 
+        reasonCode: selectedReasonCode ?? 'KHAC',
+        note: noteController.text.trim(),
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<CheckInBloc, CheckInState>(
@@ -58,6 +152,9 @@ class _CheckInView extends StatelessWidget {
           return true;
         }
         if (c.errorMessage != null && p.errorMessage != c.errorMessage) {
+          return true;
+        }
+        if (c.earlyCheckoutWarningMessage != null && p.earlyCheckoutWarningMessage != c.earlyCheckoutWarningMessage) {
           return true;
         }
         return false;
@@ -77,6 +174,9 @@ class _CheckInView extends StatelessWidget {
         }
         if (state.errorMessage != null) {
           await _showSuccessDialog(context, state.errorMessage!);
+        }
+        if (state.earlyCheckoutWarningMessage != null) {
+          await _showEarlyCheckoutDialog(context, state.earlyCheckoutWarningMessage!);
         }
       },
       child: Scaffold(

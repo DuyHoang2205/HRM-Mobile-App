@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../core/utils/attendance_day_policy.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_state.dart';
 import '../models/attendance_log.dart';
@@ -84,7 +85,11 @@ class _MonthlyTimesheetTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final cellDataList = _buildCalendar(state.filterDate, state.logs);
+        final cellDataList = _buildCalendar(
+          state.filterDate,
+          state.logs,
+          state.dayPolicies,
+        );
 
         return Column(
           children: [
@@ -126,6 +131,7 @@ class _MonthlyTimesheetTab extends StatelessWidget {
   List<_TimesheetCellData> _buildCalendar(
     DateTime monthDate,
     List<AttendanceLog> logs,
+    Map<String, AttendancePolicyConfig> dayPolicies,
   ) {
     // 1. Group logs by yyyy-MM-dd
     final Map<String, List<AttendanceLog>> grouped = {};
@@ -164,11 +170,16 @@ class _MonthlyTimesheetTab extends StatelessWidget {
 
       final dayLogs = grouped[key] ?? [];
       _DayStatus status = _DayStatus.none;
+      final eval = AttendanceDayPolicy.evaluate(
+        date: current,
+        logs: dayLogs,
+        config: dayPolicies[key],
+      );
 
       if (isCurrentMonth && current.compareTo(todayDate) <= 0) {
-        if (dayLogs.length >= 2) {
+        if (eval.hasCompletePair && eval.meetsMinimum) {
           status = _DayStatus.normal;
-        } else if (dayLogs.length == 1) {
+        } else if (dayLogs.isNotEmpty) {
           status = _DayStatus.missing;
         } else {
           if (isSunday || isSaturday) {
@@ -210,7 +221,11 @@ class _WeeklyTimesheetTab extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final cellDataList = _buildWeekly(state.filterDate, state.logs);
+        final cellDataList = _buildWeekly(
+          state.filterDate,
+          state.logs,
+          state.dayPolicies,
+        );
 
         return Column(
           children: [
@@ -256,6 +271,7 @@ class _WeeklyTimesheetTab extends StatelessWidget {
   List<_TimesheetCellData> _buildWeekly(
     DateTime monthDate,
     List<AttendanceLog> logs,
+    Map<String, AttendancePolicyConfig> dayPolicies,
   ) {
     final Map<String, List<AttendanceLog>> grouped = {};
     for (var log in logs) {
@@ -288,11 +304,16 @@ class _WeeklyTimesheetTab extends StatelessWidget {
 
       final dayLogs = grouped[key] ?? [];
       _DayStatus status = _DayStatus.none;
+      final eval = AttendanceDayPolicy.evaluate(
+        date: current,
+        logs: dayLogs,
+        config: dayPolicies[key],
+      );
 
       if (isCurrentMonth && current.compareTo(todayDate) <= 0) {
-        if (dayLogs.length >= 2) {
+        if (eval.hasCompletePair && eval.meetsMinimum) {
           status = _DayStatus.normal;
-        } else if (dayLogs.length == 1) {
+        } else if (dayLogs.isNotEmpty) {
           status = _DayStatus.missing;
         } else {
           if (isSunday || isSaturday) {

@@ -36,8 +36,8 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     on<ConfirmPressed>((event, emit) async {
       if (state.isConfirming) return;
 
-      // --- LOGIC CHẶN CHECK-OUT SỚM ---
-      if (state.isCheckoutMode && state.shiftEndTime != null) {
+      // --- LOGIC CHẶN CẢNH BÁO CHECK-OUT SỚM ---
+      if (!event.force && state.isCheckoutMode && state.shiftEndTime != null) {
         final now = DateTime.now();
         debugPrint('Checkout Validation Check:');
         debugPrint('- Current Time: $now');
@@ -45,17 +45,19 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
         if (now.isBefore(state.shiftEndTime!)) {
           final fmt = DateFormat('HH:mm').format(state.shiftEndTime!);
+          final diffMinutes = state.shiftEndTime!.difference(now).inMinutes;
+          
           emit(
             state.copyWith(
-              errorMessage:
-                  'Bạn không thể Check-out trước $fmt. Vui lòng thử lại sau!',
+              earlyCheckoutWarningMessage:
+                  'Bạn đang ra ca sớm $diffMinutes phút so với giờ quy định ($fmt).\nVui lòng nhập lý do giải trình (ví dụ: bận việc gia đình, ốm, ...) để tiếp tục.',
             ),
           );
           return;
         }
       }
 
-      emit(state.copyWith(isConfirming: true, errorMessage: null));
+      emit(state.copyWith(isConfirming: true, errorMessage: null, earlyCheckoutWarningMessage: null));
 
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
@@ -65,6 +67,34 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           state.copyWith(isConfirming: false, errorMessage: 'Chưa đăng nhập.'),
         );
         return;
+      }
+
+      if (event.force && event.reasonCode != null) {
+        debugPrint('EARLY CHECKOUT REASON RECEIVED: ${event.reasonCode} - Note: ${event.note}');
+        try {
+          final shiftIdInt = int.tryParse(state.selectedShiftId ?? '') ?? 8; // fallback to CA VAN PHONG (8)
+
+           final timekeepingPayload = {
+               "employeeID": employeeId,
+               "shiftID": shiftIdInt,
+               "dateApply": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+               "reason": event.reasonCode,
+               "note": event.note ?? '',
+               "fromTime": "", // Can't easily get fromTime here without fetching again, leaving empty
+               "toTime": DateFormat('HH:mm').format(DateTime.now()),
+               "siteID": siteID
+           };
+           
+          debugPrint('Sending Timekeeping Offset: $timekeepingPayload');
+          
+          await _dioClient.dio.post(
+             'timekeepingoffset',
+             data: timekeepingPayload,
+          );
+        } catch (e) {
+          debugPrint('Failed to submit timekeeping offset: $e');
+          // Không block luồng ra ca chính nếu gửi giải trình lỗi
+        }
       }
 
       try {
@@ -99,8 +129,32 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     CheckInStarted event,
     Emitter<CheckInState> emit,
   ) async {
+    await _fetchWordReasons(emit);
     await _fetchShiftInfo(emit);
     await _validateLocation(emit);
+  }
+
+  Future<void> _fetchWordReasons(Emitter<CheckInState> emit) async {
+    try {
+      final siteId = await AuthHelper.getSiteId();
+      final response = await _dioClient.dio.get('wordReason/GetAll/$siteId');
+      final data = response.data;
+      if (data is Map && data['data'] is List) {
+        final list = (data['data'] as List).map((e) => WordReasonOption(
+          code: e['CodeWordReason']?.toString() ?? '',
+          name: e['NameWordReason']?.toString() ?? '',
+        )).where((e) => e.code.isNotEmpty).toList();
+        emit(state.copyWith(wordReasons: list));
+      } else if (data is List) {
+        final list = data.map((e) => WordReasonOption(
+          code: e['CodeWordReason']?.toString() ?? '',
+          name: e['NameWordReason']?.toString() ?? '',
+        )).where((e) => e.code.isNotEmpty).toList();
+        emit(state.copyWith(wordReasons: list));
+      }
+    } catch (e) {
+      debugPrint('Error fetching word reasons: $e');
+    }
   }
 
   Future<void> _fetchShiftInfo(Emitter<CheckInState> emit) async {

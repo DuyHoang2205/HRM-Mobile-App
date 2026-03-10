@@ -28,5 +28,12 @@ class ShiftSelected extends CheckInEvent {
 }
 
 class ConfirmPressed extends CheckInEvent {
-  const ConfirmPressed();
+  final bool force;
+  final String? reasonCode;
+  final String? note;
+
+  const ConfirmPressed({this.force = false, this.reasonCode, this.note});
+
+  @override
+  List<Object?> get props => [force, reasonCode, note];
 }

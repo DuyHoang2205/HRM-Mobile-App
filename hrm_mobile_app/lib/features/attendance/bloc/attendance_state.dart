@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../../core/utils/attendance_day_policy.dart';
 import '../models/attendance_log.dart';
 
 class AttendanceState extends Equatable {
@@ -7,6 +8,7 @@ class AttendanceState extends Equatable {
   final String? error;
   final DateTime filterDate; // This acts as the startDate
   final DateTime? endDate;
+  final Map<String, AttendancePolicyConfig> dayPolicies;
 
   const AttendanceState({
     required this.logs,
@@ -14,6 +16,7 @@ class AttendanceState extends Equatable {
     this.error,
     required this.filterDate,
     this.endDate,
+    this.dayPolicies = const {},
   });
 
   factory AttendanceState.initial() {
@@ -22,6 +25,7 @@ class AttendanceState extends Equatable {
       logs: const [],
       filterDate: DateTime(now.year, now.month, 1), // Start of month
       endDate: now, // Today
+      dayPolicies: const {},
     );
   }
 
@@ -35,6 +39,7 @@ class AttendanceState extends Equatable {
     String? error,
     DateTime? filterDate,
     DateTime? endDate,
+    Map<String, AttendancePolicyConfig>? dayPolicies,
   }) {
     return AttendanceState(
       logs: logs ?? this.logs,
@@ -42,9 +47,17 @@ class AttendanceState extends Equatable {
       error: error ?? this.error,
       filterDate: filterDate ?? this.filterDate,
       endDate: endDate ?? this.endDate,
+      dayPolicies: dayPolicies ?? this.dayPolicies,
     );
   }
 
   @override
-  List<Object?> get props => [logs, isLoading, error, filterDate, endDate];
+  List<Object?> get props => [
+    logs,
+    isLoading,
+    error,
+    filterDate,
+    endDate,
+    dayPolicies,
+  ];
 }
