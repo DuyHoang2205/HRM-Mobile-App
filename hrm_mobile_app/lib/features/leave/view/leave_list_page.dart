@@ -199,6 +199,7 @@ class _LeaveListView extends StatelessWidget {
                           return Text(
                             permName ?? 'Loại phép #${req.permissionType}',
                             style: const TextStyle(
+                              color: Colors.black,
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -233,10 +234,7 @@ class _LeaveListView extends StatelessWidget {
                 ),
                 Text('Số ngày: ${_fmtQty(req.qty)}'),
                 if (req.description.isNotEmpty)
-                  Text(
-                    'Diễn giải: ${req.description}',
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                  Text('Diễn giải: ${req.description}'),
               ],
             ),
           );

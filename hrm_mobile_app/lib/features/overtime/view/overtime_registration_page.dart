@@ -21,7 +21,6 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
   final _qtyCtrl = TextEditingController();
 
   DateTime? _fromDate;
-  DateTime? _toDate;
   int? _selectedShiftId;
   int? _selectedEmployeeId; // HR: nhân viên được giao ca
   double _qty = 0;
@@ -134,12 +133,6 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
                                 if (shift != null && shift.workTime > 0) {
                                   _qty = shift.workTime;
                                   _qtyCtrl.text = _fmtQty(_qty);
-                                  // Nếu fromDate đã chọn → tự tính toDate
-                                  if (_fromDate != null) {
-                                    _toDate = _fromDate!.add(
-                                      Duration(minutes: (_qty * 60).round()),
-                                    );
-                                  }
                                 }
                               }
                             });
@@ -151,40 +144,13 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
 
                     const SizedBox(height: 16),
 
-                    // ── Thời gian bắt đầu / kết thúc ─────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel('Từ', required: true),
-                              const SizedBox(height: 8),
-                              _DatePickerField(
-                                value: _fromDate,
-                                hint: 'Chọn giờ bắt đầu',
-                                onPick: () => _pickDateTime(isStart: true),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildLabel('Đến', required: true),
-                              const SizedBox(height: 8),
-                              _DatePickerField(
-                                value: _toDate,
-                                hint: 'Chọn giờ kết thúc',
-                                onPick: () => _pickDateTime(isStart: false),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    // ── Ngày Tăng ca ─────────────────────
+                    _buildLabel('Ngày', required: true),
+                    const SizedBox(height: 8),
+                    _DatePickerField(
+                      value: _fromDate,
+                      hint: 'Chọn ngày tăng ca',
+                      onPick: _pickStartDate,
                     ),
 
                     const SizedBox(height: 16),
@@ -194,11 +160,12 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _qtyCtrl,
+                      readOnly: true,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
                       decoration: _inputDecoration(
-                        hint: 'VD: 2 hoặc 2.5',
+                        hint: 'Tự động theo ca đã chọn',
                         suffixText: 'giờ',
                       ),
                       validator: (v) {
@@ -210,20 +177,6 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
                           return 'Số giờ không hợp lệ';
                         }
                         return null;
-                      },
-                      onChanged: (v) {
-                        final parsed = double.tryParse(v.trim());
-                        if (parsed != null && parsed > 0) {
-                          setState(() {
-                            _qty = parsed;
-                            // Nếu fromDate đã có → tự tính toDate
-                            if (_fromDate != null) {
-                              _toDate = _fromDate!.add(
-                                Duration(minutes: (parsed * 60).round()),
-                              );
-                            }
-                          });
-                        }
                       },
                     ),
 
@@ -413,11 +366,9 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
     );
   }
 
-  Future<void> _pickDateTime({required bool isStart}) async {
+  Future<void> _pickStartDate() async {
     final now = DateTime.now();
-    final initial = isStart
-        ? (_fromDate ?? now)
-        : (_toDate ?? (_fromDate ?? now).add(const Duration(hours: 1)));
+    final initial = _fromDate ?? now;
 
     final date = await showDatePicker(
       context: context,
@@ -442,53 +393,8 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
     );
     if (date == null || !mounted) return;
 
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(initial),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: Color(0xFFE55A00),
-            onPrimary: Colors.white,
-            onSurface: Color(0xFF0B1B2B),
-          ),
-          textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFE55A00),
-            ),
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (time == null || !mounted) return;
-
-    final picked = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
-
     setState(() {
-      if (isStart) {
-        _fromDate = picked;
-        // Nếu đã có qty (từ ca) → tự tính toDate
-        if (_qty > 0) {
-          _toDate = picked.add(Duration(minutes: (_qty * 60).round()));
-        } else if (_toDate != null && _toDate!.isBefore(picked)) {
-          _toDate = null;
-        }
-      } else {
-        // User chọn thủ công giờ kết thúc → tính qty từ diff
-        _toDate = picked;
-        if (_fromDate != null && picked.isAfter(_fromDate!)) {
-          final diff = picked.difference(_fromDate!).inMinutes / 60;
-          _qty = double.parse(diff.toStringAsFixed(2));
-          _qtyCtrl.text = _fmtQty(_qty);
-        }
-      }
+      _fromDate = DateTime(date.year, date.month, date.day);
     });
   }
 
@@ -503,20 +409,11 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
     final isHR = bloc.state.isHR;
 
     if (!_formKey.currentState!.validate()) return;
-    if (_fromDate == null || _toDate == null) {
+    if (_fromDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Vui lòng chọn thời gian bắt đầu và kết thúc'),
+          content: Text('Vui lòng chọn ca làm việc và Ngày tăng ca'),
           backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    if (_toDate!.isBefore(_fromDate!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Giờ kết thúc phải sau giờ bắt đầu'),
-          backgroundColor: Colors.red,
         ),
       );
       return;
@@ -547,8 +444,9 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
       // NV tự xin → status=0 (Chờ HR duyệt) — tương lai
       status: isHR ? 2 : 0,
 
-      fromDate: _fromDate!,
-      toDate: _toDate!,
+      // Đặt FromDate và ToDate thành trọn vẹn 00:00 của ngày được chọn để đồng bộ với Database Zensuite
+      fromDate: DateTime(_fromDate!.year, _fromDate!.month, _fromDate!.day),
+      toDate: DateTime(_fromDate!.year, _fromDate!.month, _fromDate!.day),
       requestBy: requestBy,
       note: _noteCtrl.text.trim(),
       shiftID: _selectedShiftId!,
@@ -571,7 +469,7 @@ class _OvertimeRegistrationPageState extends State<OvertimeRegistrationPage> {
 class _DatePickerField extends StatelessWidget {
   final DateTime? value;
   final String hint;
-  final VoidCallback onPick;
+  final VoidCallback? onPick;
 
   const _DatePickerField({
     required this.value,
@@ -583,7 +481,7 @@ class _DatePickerField extends StatelessWidget {
   Widget build(BuildContext context) {
     String two(int v) => v.toString().padLeft(2, '0');
     final text = value != null
-        ? '${two(value!.hour)}:${two(value!.minute)} ${two(value!.day)}/${two(value!.month)}/${value!.year}'
+        ? '${two(value!.day)}/${two(value!.month)}/${value!.year}'
         : hint;
 
     return GestureDetector(

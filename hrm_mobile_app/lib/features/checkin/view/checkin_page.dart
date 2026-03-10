@@ -9,6 +9,7 @@ import '../widgets/checkin_map_panel.dart';
 import '../widgets/wifi_info_card.dart';
 import '../widgets/shift_option_tile.dart';
 import '../widgets/confirm_button.dart';
+import 'package:intl/intl.dart';
 
 class CheckInPage extends StatelessWidget {
   final bool isCheckoutMode;
@@ -115,14 +116,29 @@ class _CheckInView extends StatelessWidget {
                   BlocBuilder<CheckInBloc, CheckInState>(
                     buildWhen: (p, c) =>
                         p.warning != c.warning ||
-                        p.isCheckoutMode != c.isCheckoutMode,
+                        p.isCheckoutMode != c.isCheckoutMode ||
+                        p.shiftEndTime != c.shiftEndTime,
                     builder: (_, state) {
+                      String? shiftHint;
+                      if (state.shiftEndTime != null) {
+                        final end = state.shiftEndTime!;
+                        final hh = end.hour.toString().padLeft(2, '0');
+                        final mm = end.minute.toString().padLeft(2, '0');
+                        shiftHint = state.isCheckoutMode
+                            ? 'Giờ kết thúc ca: $hh:$mm'
+                            : 'Ca hôm nay kết thúc lúc: $hh:$mm';
+                      }
+
                       return Text(
-                        state.warning,
-                        style: const TextStyle(
+                        shiftHint == null
+                            ? state.warning
+                            : '${state.warning}\n$shiftHint',
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFFFF3B30),
+                          color: state.shiftEndTime == null
+                              ? const Color(0xFFFF3B30)
+                              : const Color(0xFF0B1B2B),
                           height: 1.35,
                         ),
                       );
@@ -133,10 +149,24 @@ class _CheckInView extends StatelessWidget {
                   BlocBuilder<CheckInBloc, CheckInState>(
                     buildWhen: (p, c) =>
                         p.options != c.options ||
-                        p.selectedShiftId != c.selectedShiftId,
+                        p.selectedShiftId != c.selectedShiftId ||
+                        p.shiftEndTime != c.shiftEndTime,
                     builder: (_, state) {
                       return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (state.isCheckoutMode &&
+                              state.shiftEndTime != null) ...[
+                            Text(
+                              'Giờ Ra ca quy định: ${DateFormat('HH:mm').format(state.shiftEndTime!)}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           for (final opt in state.options) ...[
                             ShiftOptionTile(option: opt),
                             const SizedBox(height: 12),

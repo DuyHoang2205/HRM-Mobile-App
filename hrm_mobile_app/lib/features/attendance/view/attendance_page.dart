@@ -8,6 +8,7 @@ import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
 import '../models/attendance_log.dart';
+import 'timesheet_page.dart';
 
 class AttendancePage extends StatelessWidget {
   const AttendancePage({super.key});
@@ -121,7 +122,7 @@ class _AttendanceViewState extends State<_AttendanceView>
       ),
       body: TabBarView(
         controller: _tab,
-        children: const [_TabLogs(), _TabBangCong()],
+        children: const [_TabLogs(), TimesheetPage()],
       ),
     );
   }
@@ -162,17 +163,17 @@ class _AttendanceTitle extends StatelessWidget {
                     return Theme(
                       data: Theme.of(context).copyWith(
                         colorScheme: const ColorScheme.light(
-                          primary: Color(0xFFE55A00), // Màu cam
+                          primary: Color(0xFFE55A00),
                           onPrimary: Colors.white,
                           onSurface: Color(
                             0xFF0B1B2B,
-                          ), // Chữ ngày thường màu xanh thẫm
+                          ),
                         ),
                         textButtonTheme: TextButtonThemeData(
                           style: TextButton.styleFrom(
                             foregroundColor: const Color(
                               0xFFE55A00,
-                            ), // Nút Lưu/Hủy màu cam
+                            ),
                           ),
                         ),
                       ),
@@ -284,8 +285,6 @@ class _TabLogsState extends State<_TabLogs> {
 
   String _dateHeader(String key) {
     final d = DateTime.parse(key);
-    // Use Vietnamese locale for date formatting
-    // Example: Thứ Tư, 11 Tháng 02
     return DateFormat('EEEE, dd MMMM', 'vi_VN').format(d);
   }
 }
@@ -327,6 +326,7 @@ class _LogItem extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
+                    color: Colors.black,
                   ),
                 ),
                 Text(
@@ -343,97 +343,6 @@ class _LogItem extends StatelessWidget {
             '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}',
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabBangCong extends StatelessWidget {
-  const _TabBangCong();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<AttendanceBloc, AttendanceState>(
-      builder: (context, state) {
-        if (state.logs.isEmpty) {
-          return const Center(child: Text('Chưa có dữ liệu cho Bảng công'));
-        }
-
-        // Grouping logs by date for Bảng công
-        final Map<String, List<AttendanceLog>> dailyLogs = {};
-        for (var log in state.logs) {
-          final key = DateFormat('yyyy-MM-dd').format(log.timestamp);
-          dailyLogs.putIfAbsent(key, () => []).add(log);
-        }
-
-        final sortedDates = dailyLogs.keys.toList()
-          ..sort((a, b) => b.compareTo(a));
-
-        return ListView.builder(
-          padding: const EdgeInsets.only(top: 8),
-          itemCount: sortedDates.length,
-          itemBuilder: (context, index) {
-            final dateStr = sortedDates[index];
-            final logs = dailyLogs[dateStr]!;
-
-            final formattedDate = DateFormat(
-              'dd/MM/yyyy',
-            ).format(DateTime.parse(dateStr));
-            final totalLogs = logs.length;
-
-            return _BangCongTile(
-              label: formattedDate,
-              value: '$totalLogs lần',
-              // Visual cue: Red text if there is an odd number of logs (likely missed a checkout)
-              valueColor: totalLogs % 2 != 0
-                  ? const Color(0xFFFF3B30)
-                  : const Color(0xFF00C389),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _BangCongTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? valueColor;
-
-  const _BangCongTile({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 18),
-            title: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF5D6B78),
-              ),
-            ),
-            trailing: Text(
-              value,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-                color: valueColor ?? const Color(0xFF0B1B2B),
-              ),
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: Color(0x11000000)),
         ],
       ),
     );

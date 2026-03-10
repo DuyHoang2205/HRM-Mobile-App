@@ -7,6 +7,7 @@ import '../../../core/network/dio_client.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../attendance/models/location.dart' as model;
 import '../../attendance/location_repository.dart';
+import 'package:intl/intl.dart';
 import 'checkin_event.dart';
 import 'checkin_state.dart';
 
@@ -26,13 +27,34 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
          ),
        ) {
     on<CheckInStarted>(_onStarted);
-    on<ShiftSelected>(
-      (event, emit) => emit(state.copyWith(selectedShiftId: event.shiftId)),
-    );
+    on<ShiftSelected>((event, emit) {
+      emit(state.copyWith(selectedShiftId: event.shiftId));
+      _updateShiftEndTimeFromSelection(emit, event.shiftId);
+    });
     on<RefreshLocationPressed>(_onRefreshLocation);
 
     on<ConfirmPressed>((event, emit) async {
       if (state.isConfirming) return;
+
+      // --- LOGIC CHẶN CHECK-OUT SỚM ---
+      if (state.isCheckoutMode && state.shiftEndTime != null) {
+        final now = DateTime.now();
+        debugPrint('Checkout Validation Check:');
+        debugPrint('- Current Time: $now');
+        debugPrint('- Required End: ${state.shiftEndTime}');
+
+        if (now.isBefore(state.shiftEndTime!)) {
+          final fmt = DateFormat('HH:mm').format(state.shiftEndTime!);
+          emit(
+            state.copyWith(
+              errorMessage:
+                  'Bạn không thể Check-out trước $fmt. Vui lòng thử lại sau!',
+            ),
+          );
+          return;
+        }
+      }
+
       emit(state.copyWith(isConfirming: true, errorMessage: null));
 
       final employeeId = await AuthHelper.getEmployeeId();
@@ -77,7 +99,214 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     CheckInStarted event,
     Emitter<CheckInState> emit,
   ) async {
+    await _fetchShiftInfo(emit);
     await _validateLocation(emit);
+  }
+
+  Future<void> _fetchShiftInfo(Emitter<CheckInState> emit) async {
+    try {
+      final employeeId = await _resolveEmployeeIdForDebug();
+      final siteId = await AuthHelper.getSiteId();
+
+      if (employeeId == null) return;
+
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      // 1. Lấy ca được gán riêng (nếu có)
+      final responseByDay = await _dioClient.dio.post(
+        'shift/getShiftByDay',
+        data: {'employeeID': employeeId, 'date': todayStr, 'siteID': siteId},
+      );
+      debugPrint(
+        'getShiftByDay payload => employeeID: $employeeId, date: $todayStr, siteID: $siteId',
+      );
+
+      DateTime? shiftEnd;
+      final shiftOptions = <ShiftOption>[];
+      final seenIds = <String>{};
+
+      // Xử lý ca được gán trước
+      debugPrint('==== RESPONSE getShiftByDay ====');
+      debugPrint(responseByDay.data?.toString());
+      debugPrint('================================');
+
+      final rows = _extractRows(responseByDay.data);
+      final isSuccess =
+          (responseByDay.statusCode ?? 0) >= 200 &&
+          (responseByDay.statusCode ?? 0) < 300;
+      if (isSuccess && rows.isNotEmpty) {
+        for (final row in rows) {
+          final fromRaw = _pickAny(row, const [
+            'fromTime',
+            'FromTime',
+            'fromtime',
+          ]);
+          final toRaw = _pickAny(row, const ['toTime', 'ToTime', 'totime']);
+          final from = _parseBackendTime(
+            fromRaw?.toString(),
+          );
+          final to = _parseBackendTime(
+            toRaw?.toString(),
+          );
+
+          DateTime? normalizedTo;
+          if (from != null && to != null) {
+            normalizedTo = _normalizeShiftEnd(from: from, to: to);
+            shiftEnd ??= normalizedTo;
+          }
+
+          final title =
+              (_pickAny(row, const ['title', 'Title', 'code', 'Code']))
+                  ?.toString() ??
+              'Ca làm việc';
+          final id = (_pickAny(row, const ['id', 'ID']) ?? title).toString();
+
+          if (!seenIds.contains(id)) {
+            final range = (from != null && normalizedTo != null)
+                ? '(${_fmtHHmm(from)} - ${_fmtHHmm(normalizedTo)})'
+                : '(--:-- - --:--)';
+            final option = ShiftOption(
+              id: id,
+              title: title,
+              timeRange: range,
+              rawToTime: toRaw?.toString(),
+            );
+            shiftOptions.add(option);
+            seenIds.add(id);
+          }
+        }
+      }
+
+      emit(
+        state.copyWith(
+          shiftEndTime: shiftEnd,
+          options: shiftOptions.isNotEmpty ? shiftOptions : state.options,
+          selectedShiftId: shiftOptions.isNotEmpty
+              ? shiftOptions.first.id
+              : state.selectedShiftId,
+        ),
+      );
+
+      debugPrint('Loaded Shift Information:');
+      debugPrint('- Assigned Shift End: $shiftEnd');
+      debugPrint('- Total Options: ${shiftOptions.length}');
+      if (shiftOptions.isNotEmpty) {
+        debugPrint('- First Option End: ${shiftOptions.first.rawToTime}');
+      }
+
+      // Nếu chưa có shiftEnd từ ca gán, lấy từ mốc đầu tiên của danh sách
+      if (shiftEnd == null && shiftOptions.isNotEmpty) {
+        _updateShiftEndTimeFromSelection(emit, shiftOptions.first.id);
+      }
+    } catch (e) {
+      debugPrint('Error fetching shift info: $e');
+    }
+  }
+
+  void _updateShiftEndTimeFromSelection(
+    Emitter<CheckInState> emit,
+    String shiftId,
+  ) {
+    try {
+      final selected = state.options.firstWhere(
+        (o) => o.id == shiftId,
+        orElse: () => state.options.first,
+      );
+      if (selected.rawToTime != null) {
+        final dt = _parseBackendTime(selected.rawToTime);
+        emit(state.copyWith(shiftEndTime: dt, selectedShiftId: shiftId));
+      }
+    } catch (e) {
+      debugPrint('Error updating shift end time: $e');
+    }
+  }
+
+  String _fmtHHmm(DateTime dt) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  DateTime? _parseBackendTime(String? timeStr) {
+    if (timeStr == null || timeStr.isEmpty) return null;
+    try {
+      final now = DateTime.now();
+      final raw = timeStr.trim();
+
+      // Nếu là định dạng ISO (chứa T)
+      if (raw.contains('T')) {
+        final parsed = DateTime.parse(raw);
+        final utcHour = parsed.toUtc().hour;
+        final utcMinute = parsed.toUtc().minute;
+        final utcSecond = parsed.toUtc().second;
+
+        // Tạo lại UTC time vào chính ngày giờ HIỆN TẠI thay vì 1970
+        // để khi gọi .toLocal() sẽ áp dụng múi giờ hiện tại (+7) thay vì +8 của năm 1970
+        final todayUtc = DateTime.utc(
+          now.year,
+          now.month,
+          now.day,
+          utcHour,
+          utcMinute,
+          utcSecond,
+        );
+
+        return todayUtc.toLocal();
+      }
+
+      // Hỗ trợ nhiều định dạng từ SQL: HH:mm, HH:mm:ss, HH:mm:ss.fffffff, yyyy-MM-dd HH:mm:ss
+      final match = RegExp(
+        r'(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?',
+      ).firstMatch(raw);
+      if (match != null) {
+        final hour = int.parse(match.group(1)!);
+        final minute = int.parse(match.group(2)!);
+        final second = int.parse(match.group(3) ?? '0');
+        return DateTime(now.year, now.month, now.day, hour, minute, second);
+      }
+    } catch (e) {
+      debugPrint('Error parsing time: $timeStr -> $e');
+    }
+    return null;
+  }
+
+  DateTime _normalizeShiftEnd({required DateTime from, required DateTime to}) {
+    if (to.isBefore(from)) {
+      return to.add(const Duration(days: 1));
+    }
+    return to;
+  }
+
+  List<Map<String, dynamic>> _extractRows(dynamic data) {
+    if (data is List) {
+      return data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+    if (data is Map) {
+      final nested = data['data'];
+      if (nested is List) {
+        return nested
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+    }
+    return const [];
+  }
+
+  dynamic _pickAny(Map<String, dynamic> row, List<String> keys) {
+    for (final key in keys) {
+      if (row.containsKey(key)) return row[key];
+    }
+    return null;
+  }
+
+  Future<int?> _resolveEmployeeIdForDebug() async {
+    final storedEmployeeId = await AuthHelper.getEmployeeId();
+    if (!kDebugMode) return storedEmployeeId;
+
+    final username = (await AuthHelper.getUserName())?.toLowerCase().trim();
+    if (username == 'admin') return 2;
+    if (username == 'baoduy') return 3195;
+    return storedEmployeeId;
   }
 
   Future<void> _onRefreshLocation(
@@ -179,7 +408,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         locationName: matchedName,
         warning: state.isCheckoutMode
             ? 'Bạn đủ điều kiện ra ca.'
-            : 'Bạn đủ điều kiện ra ca.',
+            : 'Bạn đủ điều kiện vào ca.',
       ),
     );
   }

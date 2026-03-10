@@ -37,6 +37,7 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
+          debugPrint('HTTP ${options.method} => ${options.baseUrl}${options.path}');
           return handler.next(options);
         },
         onError: (DioException error, ErrorInterceptorHandler handler) async {

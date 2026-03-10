@@ -4,15 +4,17 @@ class ShiftOption extends Equatable {
   final String id;
   final String title;
   final String timeRange;
+  final String? rawToTime;
 
   const ShiftOption({
     required this.id,
     required this.title,
     required this.timeRange,
+    this.rawToTime,
   });
 
   @override
-  List<Object?> get props => [id, title, timeRange];
+  List<Object?> get props => [id, title, timeRange, rawToTime];
 }
 
 class CheckInState extends Equatable {
@@ -45,6 +47,9 @@ class CheckInState extends Equatable {
   final String? errorMessage;
   final DateTime? actionTimestamp;
 
+  // NEW: early check-out validation
+  final DateTime? shiftEndTime;
+
   const CheckInState({
     required this.initials,
     required this.wifiName,
@@ -66,6 +71,7 @@ class CheckInState extends Equatable {
     required this.successMessage,
     required this.errorMessage,
     required this.actionTimestamp,
+    required this.shiftEndTime,
   });
 
   factory CheckInState.initial({
@@ -103,6 +109,7 @@ class CheckInState extends Equatable {
       successMessage: null,
       errorMessage: null,
       actionTimestamp: null,
+      shiftEndTime: null,
     );
   }
 
@@ -127,6 +134,7 @@ class CheckInState extends Equatable {
     String? successMessage,
     String? errorMessage,
     DateTime? actionTimestamp,
+    DateTime? shiftEndTime,
   }) {
     return CheckInState(
       initials: initials ?? this.initials,
@@ -149,6 +157,7 @@ class CheckInState extends Equatable {
       successMessage: successMessage,
       errorMessage: errorMessage,
       actionTimestamp: actionTimestamp ?? this.actionTimestamp,
+      shiftEndTime: shiftEndTime ?? this.shiftEndTime,
     );
   }
 
@@ -174,6 +183,7 @@ class CheckInState extends Equatable {
     successMessage,
     errorMessage,
     actionTimestamp?.millisecondsSinceEpoch,
+    shiftEndTime?.millisecondsSinceEpoch,
   ];
 }
 

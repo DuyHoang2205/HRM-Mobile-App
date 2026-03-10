@@ -51,34 +51,42 @@ class OvertimeRequest {
   });
 
   factory OvertimeRequest.fromJson(Map<String, dynamic> json) {
+    int toInt(dynamic value, {int fallback = 0}) {
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? fallback;
+    }
+
+    double toDouble(dynamic value, {double fallback = 0}) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? fallback;
+    }
+
     return OvertimeRequest(
-      id: json['id'] as int?,
-      code: json['code']?.toString() ?? '',
-      status: (json['status'] as num?)?.toInt() ?? 0,
-      fromDate: json['fromDate'] != null
-          ? DateTime.parse(json['fromDate'].toString())
-          : DateTime.now(),
-      toDate: json['toDate'] != null
-          ? DateTime.parse(json['toDate'].toString())
-          : DateTime.now(),
-      requestBy: (json['requestBy'] as num?)?.toInt() ?? 0,
-      reason: (json['reason'] as num?)?.toInt() ?? 0,
-      note: json['note']?.toString() ?? '',
-      shiftID: (json['shiftID'] as num?)?.toInt() ?? 0,
-      qty: (json['qty'] as num?)?.toDouble() ?? 0.0,
-      ignore: json['ignore']?.toString() ?? '',
-      createBy: json['createBy']?.toString() ?? '',
-      updateBy: json['updateBy']?.toString() ?? '',
-      createDate: json['createDate'] != null
-          ? DateTime.tryParse(json['createDate'].toString())
+      id: toInt(json['id'] ?? json['ID'], fallback: 0) == 0
+          ? null
+          : toInt(json['id'] ?? json['ID']),
+      code: (json['code'] ?? json['Code'])?.toString() ?? '',
+      status: toInt(json['status'] ?? json['Status']),
+      fromDate: _parseTime(json['fromDate'] ?? json['FromDate']),
+      toDate: _parseTime(json['toDate'] ?? json['ToDate']),
+      requestBy: toInt(json['requestBy'] ?? json['RequestBy']),
+      reason: toInt(json['reason'] ?? json['Reason']),
+      note: (json['note'] ?? json['Note'])?.toString() ?? '',
+      shiftID: toInt(json['shiftID'] ?? json['ShiftID']),
+      qty: toDouble(json['qty'] ?? json['Qty']),
+      ignore: (json['ignore'] ?? json['Ignore'])?.toString() ?? '',
+      createBy: (json['createBy'] ?? json['CreateBy'])?.toString() ?? '',
+      updateBy: (json['updateBy'] ?? json['UpdateBy'])?.toString() ?? '',
+      createDate: (json['createDate'] ?? json['CreateDate']) != null
+          ? DateTime.tryParse(
+              (json['createDate'] ?? json['CreateDate']).toString(),
+            )
           : null,
-      docType: json['docType']?.toString() ?? 'OTDocType',
-      siteID: json['siteID']?.toString() ?? '',
+      docType: (json['docType'] ?? json['DocType'])?.toString() ?? 'OTDocType',
+      siteID: (json['siteID'] ?? json['SiteID'])?.toString() ?? '',
     );
   }
 
-  /// Gửi lên POST /api/decisionOvertime.
-  /// CHỈ chứa trường có thật, giống hệt schema Entity Backend.
   Map<String, dynamic> toJson() {
     return {
       'code': code,
@@ -102,4 +110,21 @@ class OvertimeRequest {
   @override
   String toString() =>
       'OvertimeRequest(id: $id, requestBy: $requestBy, shiftID: $shiftID, qty: $qty, status: $status)';
+
+  static DateTime _parseTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    try {
+      final str = value.toString();
+      if (!str.contains('T')) {
+        return DateTime.parse(str);
+      }
+
+      // Extract time from the API exactly as sent without guessing the offsets
+      // If the backend sends 00:00:00 Local time, this will parse to 00:00
+      final dt = DateTime.parse(str);
+      return dt.toLocal();
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
 }

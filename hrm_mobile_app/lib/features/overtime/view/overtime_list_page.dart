@@ -410,6 +410,6 @@ class _OvertimeCard extends StatelessWidget {
 
   String _fmt(DateTime d) {
     String two(int v) => v.toString().padLeft(2, '0');
-    return '${two(d.hour)}:${two(d.minute)} ${two(d.day)}/${two(d.month)}';
+    return '${two(d.day)}/${two(d.month)}';
   }
 }

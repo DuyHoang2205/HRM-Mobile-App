@@ -32,6 +32,9 @@ class OvertimeRepository {
       final response = await _client.dio.get('/decisionOvertime/$siteID');
       if (response.statusCode == 200) {
         final List<dynamic> raw = response.data as List? ?? [];
+        if (raw.isNotEmpty) {
+          debugPrint('[OvertimeRepository] RAW FIRST ITEM: ${raw.first}');
+        }
         return raw
             .cast<Map<String, dynamic>>()
             .map(OvertimeRequest.fromJson)

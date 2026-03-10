@@ -60,60 +60,70 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       // Calculate number of days
       final daysDiff = queryEnd.difference(start).inDays;
 
-      // If range is large (> 31 days), limit concurrency or just warn?
-      // For now, we assume reasonable range usage.
+      // Attempt to load using the optimized byEmployee endpoint first
+      // Note: Backend expects 'employeeId' (lowercase d), not 'employeeID' for this endpoint
+      try {
+        final fFromDate = fmt(start);
+        final fToDate = fmt(queryEnd);
 
-      List<Future<Response>> futures = [];
-
-      // Fetch day-by-day using getScanByDay (Raw Data) which is proven to return data for this test user
-      for (int i = 0; i <= daysDiff; i++) {
-        final date = start.add(Duration(days: i));
-        final fDate = fmt(date);
-        // We query using getScanByDay for EACH day in the range.
-        // This is necessary because byEmployee seems to return empty for ID 10132 (or at least for history).
-        futures.add(
-          _dioClient.dio.post(
-            'attendance/getScanByDay/$siteID',
-            data: {
-              'employeeID': employeeId, // Use the INT id (e.g. 2)
-              'day': fDate,
-            },
-          ),
+        final response = await _dioClient.dio.post(
+          'attendance/byEmployee/$siteID',
+          data: {
+            'employeeId': employeeId,
+            'fromDate': fFromDate,
+            'toDate': fToDate,
+          },
         );
-      }
 
-      final responses = await Future.wait(futures);
-
-      for (int i = 0; i < responses.length; i++) {
-        final response = responses[i];
-        try {
-          if (response.data is List) {
-            final list = response.data as List;
-            // debugPrint('Chunk $i Response: ${list.length} records');
-            final dailyLogs = list
+        if (response.data is List) {
+          final list = response.data as List;
+          if (list.isNotEmpty) {
+            allLogs = list
                 .map(
                   (e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)),
                 )
                 .toList();
-            allLogs.addAll(dailyLogs);
           }
-        } catch (e) {
-          debugPrint('Error parsing chunk logs: $e');
+        }
+      } catch (e) {
+        debugPrint('byEmployee fallback to getScanByDay due to error: $e');
+      }
+
+      // If byEmployee returned empty (possibly due to Stored Procedure limits), fallback to day-by-day
+      if (allLogs.isEmpty) {
+        debugPrint(
+          'byEmployee returned empty, using getScanByDay loop fallback',
+        );
+        List<Future<Response>> futures = [];
+        for (int i = 0; i <= daysDiff; i++) {
+          final date = start.add(Duration(days: i));
+          futures.add(
+            _dioClient.dio.post(
+              'attendance/getScanByDay/$siteID',
+              data: {'employeeID': employeeId, 'day': fmt(date)},
+            ),
+          );
+        }
+
+        final responses = await Future.wait(futures);
+        for (final response in responses) {
+          try {
+            if (response.data is List) {
+              final list = response.data as List;
+              allLogs.addAll(
+                list.map(
+                  (e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)),
+                ),
+              );
+            }
+          } catch (e) {
+            // ignore
+          }
         }
       }
 
-      // Deduplicate if necessary (simple id check or timestamp check)
-      // Since we fetch by distinct days, overlaps shouldn't happen unless getScanByDay duplicates byEmployee logs
-      // AttendanceActionResolver handles grouping logic, so duplicate raw entries might be an issue?
-      // Resolving logic will act on timestamps. Duplicate timestamps might cause issues?
-      // Let's deduplicate by ID if available, or just leave it to Resolver.
-      // Actually duplications between byEmployee (History) and getScanByDay (Raw) are possible for Today.
-      // We can remove EXACT duplicates.
       final uniqueLogs = <AttendanceLog>[];
       for (var log in allLogs) {
-        // Using a unique key: ID (if > 0) or specific timestamp string?
-        // Logs from byEmployee have ID. Logs from getScanByDay might have ID 0?
-        // Let's rely on Resolver. The issue is missing logs, not duplicates.
         uniqueLogs.add(log);
       }
       allLogs = uniqueLogs;
