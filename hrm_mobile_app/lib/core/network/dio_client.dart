@@ -9,16 +9,11 @@ class DioClient {
 
   DioClient() {
     // ─── BACKEND URL CONFIG ───────────────────────────────────────────
-    // Dùng URL production mặc định
-    const prodUrl = 'http://vpn.dptsolution.net:853/hrm/api/';
-
-    // Khi cần test local, bạn chỉ cần comment dòng `baseUrl: prodUrl` ở dưới
-    // và uncomment dòng `baseUrl: localUrl`
-    // const localUrl = 'http://localhost:3004/api/';
+    const localUrl = 'http://localhost:3004/api/';
 
     dio = Dio(
       BaseOptions(
-        baseUrl: prodUrl, // ← Thay bằng `localUrl` khi cần test backend local
+        baseUrl: localUrl,
 
         validateStatus: (status) {
           if (status == null) return false;

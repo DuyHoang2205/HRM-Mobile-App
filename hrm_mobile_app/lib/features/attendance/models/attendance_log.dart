@@ -79,14 +79,10 @@ class AttendanceLog {
           String timePart = attendanceTime.toString();
           if (timePart.contains('T')) {
             final dt = DateTime.parse(timePart);
-            // Backend stores Time in UTC with +1h offset (e.g. 07:00Z for 14:00 VN)
-            // We need to convert to Local and Subtract 1 hour to get correct HH:mm:ss
+            // Just convert UTC from DB to local without manual subtraction
             final vietnamTime = dt.toLocal();
-            final correctedTime = vietnamTime.subtract(
-              const Duration(hours: 1),
-            );
             timePart =
-                "${correctedTime.hour.toString().padLeft(2, '0')}:${correctedTime.minute.toString().padLeft(2, '0')}:${correctedTime.second.toString().padLeft(2, '0')}";
+                "${vietnamTime.hour.toString().padLeft(2, '0')}:${vietnamTime.minute.toString().padLeft(2, '0')}:${vietnamTime.second.toString().padLeft(2, '0')}";
           }
 
           parsedTime = DateTime.parse('${datePart}T$timePart');
@@ -119,18 +115,17 @@ class AttendanceLog {
         DateTime timePart;
         String tStr = authTime.toString();
         if (tStr.contains('T')) {
-          // Backend sends UTC time, but TypeORM/MSSQL adds +1 hour during serialization
-          // So we need to subtract 1 hour after converting to local
+          // Backend sends UTC time from string type, but DO NOT subtract 1h manually here
+          // MSSQL mapping might be different. Let's trust the UTC -> Local conversion first.
           final parsedUTC = DateTime.parse(tStr);
           final vietnamTime = parsedUTC.toLocal();
-          final correctedTime = vietnamTime.subtract(const Duration(hours: 1));
           timePart = DateTime(
             1970,
             1,
             1,
-            correctedTime.hour,
-            correctedTime.minute,
-            correctedTime.second,
+            vietnamTime.hour,
+            vietnamTime.minute,
+            vietnamTime.second,
           );
         } else {
           // Assume HH:mm or HH:mm:ss

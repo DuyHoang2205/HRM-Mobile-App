@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../../core/utils/attendance_day_policy.dart';
 import '../models/attendance_log.dart';
+import '../models/daily_summary.dart';
 
 class AttendanceState extends Equatable {
   final List<AttendanceLog> logs;
@@ -9,6 +10,7 @@ class AttendanceState extends Equatable {
   final DateTime filterDate; // This acts as the startDate
   final DateTime? endDate;
   final Map<String, AttendancePolicyConfig> dayPolicies;
+  final Map<String, DailySummary> dailySummaries;
 
   const AttendanceState({
     required this.logs,
@@ -17,6 +19,7 @@ class AttendanceState extends Equatable {
     required this.filterDate,
     this.endDate,
     this.dayPolicies = const {},
+    this.dailySummaries = const {},
   });
 
   factory AttendanceState.initial() {
@@ -26,6 +29,7 @@ class AttendanceState extends Equatable {
       filterDate: DateTime(now.year, now.month, 1), // Start of month
       endDate: now, // Today
       dayPolicies: const {},
+      dailySummaries: const {},
     );
   }
 
@@ -40,6 +44,7 @@ class AttendanceState extends Equatable {
     DateTime? filterDate,
     DateTime? endDate,
     Map<String, AttendancePolicyConfig>? dayPolicies,
+    Map<String, DailySummary>? dailySummaries,
   }) {
     return AttendanceState(
       logs: logs ?? this.logs,
@@ -48,6 +53,7 @@ class AttendanceState extends Equatable {
       filterDate: filterDate ?? this.filterDate,
       endDate: endDate ?? this.endDate,
       dayPolicies: dayPolicies ?? this.dayPolicies,
+      dailySummaries: dailySummaries ?? this.dailySummaries,
     );
   }
 
@@ -59,5 +65,6 @@ class AttendanceState extends Equatable {
     filterDate,
     endDate,
     dayPolicies,
+    dailySummaries,
   ];
 }

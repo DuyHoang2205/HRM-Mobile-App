@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/utils/attendance_day_policy.dart';
 import '../bloc/attendance_bloc.dart';
 import '../bloc/attendance_state.dart';
-import '../models/attendance_log.dart';
+import '../models/daily_summary.dart';
 
 class TimesheetPage extends StatefulWidget {
   const TimesheetPage({super.key});
@@ -59,14 +58,107 @@ class _TimesheetPageState extends State<TimesheetPage>
           ),
         ),
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: const [
-              _MonthlyTimesheetTab(),
-              _WeeklyTimesheetTab(),
-              Center(child: Text('Đang phát triểnThống kê')),
-              Center(child: Text('Đang phát triển: Danh sách')),
+          child: Stack(
+            children: [
+              TabBarView(
+                controller: _tabController,
+                children: const [
+                  _MonthlyTimesheetTab(),
+                  _WeeklyTimesheetTab(),
+                  Center(child: Text('Đang phát triểnThống kê')),
+                  Center(child: Text('Đang phát triển: Danh sách')),
+                ],
+              ),
+              Positioned(
+                bottom: 24,
+                right: 24,
+                child: FloatingActionButton(
+                  mini: true,
+                  heroTag: 'legendBtn',
+                  backgroundColor: Colors.white,
+                  elevation: 4,
+                  onPressed: () => _showLegendDialog(context),
+                  tooltip: 'Ký hiệu chấm công',
+                  child: const Icon(Icons.info_outline, color: Colors.grey),
+                ),
+              ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showLegendDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ký hiệu chấm công'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildLegendItem(
+              '1',
+              'Đủ công (quẹt đủ và đủ giờ)',
+              const Color(0xFF2CAD61),
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem(
+              'x',
+              'Lỗi công (thiếu Check-in hoặc Check-out)',
+              const Color(0xFFECAE41),
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem(
+              'x/P',
+              'Nửa ngày công + nửa ngày phép',
+              const Color(0xFFECAE41),
+            ),
+            const SizedBox(height: 12),
+            _buildLegendItem('P', 'Nghỉ phép', const Color(0xFFD63F3A)),
+            const SizedBox(height: 12),
+            _buildLegendItem('C', 'Công tác', const Color(0xFF4F8DFD)),
+            const SizedBox(height: 12),
+            _buildLegendItem('0', 'Nghỉ/không phát sinh công', Colors.black54),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String symbol, String label, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Text(
+            symbol,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
           ),
         ),
       ],
@@ -87,8 +179,7 @@ class _MonthlyTimesheetTab extends StatelessWidget {
 
         final cellDataList = _buildCalendar(
           state.filterDate,
-          state.logs,
-          state.dayPolicies,
+          state.dailySummaries,
         );
 
         return Column(
@@ -130,17 +221,8 @@ class _MonthlyTimesheetTab extends StatelessWidget {
 
   List<_TimesheetCellData> _buildCalendar(
     DateTime monthDate,
-    List<AttendanceLog> logs,
-    Map<String, AttendancePolicyConfig> dayPolicies,
+    Map<String, DailySummary> dailySummaries,
   ) {
-    // 1. Group logs by yyyy-MM-dd
-    final Map<String, List<AttendanceLog>> grouped = {};
-    for (var log in logs) {
-      final key =
-          "${log.timestamp.year}-${log.timestamp.month.toString().padLeft(2, '0')}-${log.timestamp.day.toString().padLeft(2, '0')}";
-      grouped.putIfAbsent(key, () => []).add(log);
-    }
-
     final firstDayOfMonth = DateTime(monthDate.year, monthDate.month, 1);
     final lastDayOfMonth = DateTime(monthDate.year, monthDate.month + 1, 0);
 
@@ -168,25 +250,29 @@ class _MonthlyTimesheetTab extends StatelessWidget {
           (current.month == 5 && current.day == 1) ||
           (current.month == 9 && current.day == 2);
 
-      final dayLogs = grouped[key] ?? [];
       _DayStatus status = _DayStatus.none;
-      final eval = AttendanceDayPolicy.evaluate(
-        date: current,
-        logs: dayLogs,
-        config: dayPolicies[key],
-      );
+      String displaySymbol = '';
+      DailySummary? summary;
 
-      if (isCurrentMonth && current.compareTo(todayDate) <= 0) {
-        if (eval.hasCompletePair && eval.meetsMinimum) {
-          status = _DayStatus.normal;
-        } else if (dayLogs.isNotEmpty) {
-          status = _DayStatus.missing;
-        } else {
-          if (isSunday || isSaturday) {
-            status = _DayStatus.none;
-          } else {
+      if (isCurrentMonth) {
+        if (dailySummaries.containsKey(key)) {
+          summary = dailySummaries[key]!;
+          displaySymbol = summary.daySymbol;
+          
+          if (summary.daySymbol == '0') {
+             status = _DayStatus.none; // Empty day
+          } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
+            status = _DayStatus.normal;
+          } else if (summary.daySymbol.contains('x')) {
             status = _DayStatus.missing;
+          } else {
+             status = _DayStatus.leave;
           }
+        } else if (current.compareTo(todayDate) <= 0) {
+           if (!isSunday && !isSaturday) {
+               status = _DayStatus.missing;
+               displaySymbol = 'x';
+           }
         }
       }
 
@@ -199,6 +285,8 @@ class _MonthlyTimesheetTab extends StatelessWidget {
         _TimesheetCellData(
           dateStr: dateStr,
           status: status,
+          displaySymbol: displaySymbol,
+          summary: summary,
           isToday: key == todayStr,
           isHoliday: isSunday || isSaturday,
           isPublicHoliday: isPublicHoliday,
@@ -223,8 +311,7 @@ class _WeeklyTimesheetTab extends StatelessWidget {
 
         final cellDataList = _buildWeekly(
           state.filterDate,
-          state.logs,
-          state.dayPolicies,
+          state.dailySummaries,
         );
 
         return Column(
@@ -270,16 +357,8 @@ class _WeeklyTimesheetTab extends StatelessWidget {
 
   List<_TimesheetCellData> _buildWeekly(
     DateTime monthDate,
-    List<AttendanceLog> logs,
-    Map<String, AttendancePolicyConfig> dayPolicies,
+    Map<String, DailySummary> dailySummaries,
   ) {
-    final Map<String, List<AttendanceLog>> grouped = {};
-    for (var log in logs) {
-      final key =
-          "${log.timestamp.year}-${log.timestamp.month.toString().padLeft(2, '0')}-${log.timestamp.day.toString().padLeft(2, '0')}";
-      grouped.putIfAbsent(key, () => []).add(log);
-    }
-
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
     final offset = todayDate.weekday - 1;
@@ -302,25 +381,29 @@ class _WeeklyTimesheetTab extends StatelessWidget {
           (current.month == 5 && current.day == 1) ||
           (current.month == 9 && current.day == 2);
 
-      final dayLogs = grouped[key] ?? [];
       _DayStatus status = _DayStatus.none;
-      final eval = AttendanceDayPolicy.evaluate(
-        date: current,
-        logs: dayLogs,
-        config: dayPolicies[key],
-      );
+      String displaySymbol = '';
+      DailySummary? summary;
 
-      if (isCurrentMonth && current.compareTo(todayDate) <= 0) {
-        if (eval.hasCompletePair && eval.meetsMinimum) {
-          status = _DayStatus.normal;
-        } else if (dayLogs.isNotEmpty) {
-          status = _DayStatus.missing;
-        } else {
-          if (isSunday || isSaturday) {
-            status = _DayStatus.none;
-          } else {
+      if (isCurrentMonth) {
+        if (dailySummaries.containsKey(key)) {
+          summary = dailySummaries[key]!;
+          displaySymbol = summary.daySymbol;
+
+          if (summary.daySymbol == '0') {
+             status = _DayStatus.none; // Empty day
+          } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
+            status = _DayStatus.normal;
+          } else if (summary.daySymbol.contains('x')) {
             status = _DayStatus.missing;
+          } else {
+             status = _DayStatus.leave;
           }
+        } else if (current.compareTo(todayDate) <= 0) {
+           if (!isSunday && !isSaturday) {
+               status = _DayStatus.missing;
+               displaySymbol = 'x';
+           }
         }
       }
 
@@ -333,6 +416,8 @@ class _WeeklyTimesheetTab extends StatelessWidget {
         _TimesheetCellData(
           dateStr: dateStr,
           status: status,
+          displaySymbol: displaySymbol,
+          summary: summary,
           isToday: key == todayStr,
           isHoliday: isSunday || isSaturday,
           isPublicHoliday: isPublicHoliday,
@@ -378,6 +463,8 @@ enum _DayStatus { none, normal, missing, leave, emptyZero }
 class _TimesheetCellData {
   final String dateStr;
   final _DayStatus status;
+  final String? displaySymbol;
+  final DailySummary? summary;
   final bool isToday;
   final bool isHoliday;
   final bool isPublicHoliday;
@@ -386,6 +473,8 @@ class _TimesheetCellData {
   _TimesheetCellData({
     required this.dateStr,
     this.status = _DayStatus.none,
+    this.displaySymbol,
+    this.summary,
     this.isToday = false,
     this.isHoliday = false,
     this.isPublicHoliday = false,
@@ -398,6 +487,137 @@ class _TimesheetCell extends StatelessWidget {
 
   const _TimesheetCell({required this.data});
 
+  void _showDetail(BuildContext context) {
+    final summary = data.summary;
+    if (summary == null) return;
+
+    String v(String? x) => (x == null || x.isEmpty) ? '--' : x;
+    final worked = summary.rawWorkedHours == null
+        ? '--'
+        : summary.rawWorkedHours!.toStringAsFixed(2);
+    final breakMinutes = summary.breakMinutesDeducted?.toString() ?? '--';
+    final notes = _buildUseCaseNotes(summary);
+
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Ngày ${summary.date}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Ký hiệu: ${summary.daySymbol}'),
+            Text('${_buildShiftLabel(summary)}'),
+            Text('Vào đầu tiên: ${v(summary.firstIn)}'),
+            Text('Ra cuối cùng: ${v(summary.lastOut)}'),
+            Text('Giờ làm thực tế: $worked'),
+            Text('Giờ yêu cầu: ${summary.requiredHours.toStringAsFixed(2)}'),
+            Text('Trừ nghỉ giữa ca (phút): $breakMinutes'),
+            Text('Đi trễ (phút): ${summary.lateMinutes}'),
+            Text('Về sớm (phút): ${summary.earlyLeaveMinutes}'),
+            if (summary.otEligibleMinutes > 0)
+              Text('OT đủ điều kiện (phút): ${summary.otEligibleMinutes}'),
+            if (summary.otApprovedMinutes > 0)
+              Text('OT đã duyệt (phút): ${summary.otApprovedMinutes}'),
+            if (notes.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Giải thích:',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 4),
+              ...notes.map(
+                (item) => Text('• $item', style: const TextStyle(fontSize: 13)),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildShiftLabel(DailySummary s) {
+    final title = (s.shiftTitle ?? '').trim();
+    final code = (s.shiftCode ?? '').trim();
+    final from = _formatClock(s.shiftFromTime);
+    final to = _formatClock(s.shiftToTime);
+    final hasRange = from.isNotEmpty && to.isNotEmpty;
+
+    final name = title.isNotEmpty
+        ? title
+        : (code.isNotEmpty ? '$code' : 'Chưa có thông tin');
+    if (!hasRange) return name;
+    return '$name ($from - $to)';
+  }
+
+  String _formatClock(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return '';
+    final text = raw.trim();
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(text);
+    if (match != null) {
+      final h = match.group(1)!.padLeft(2, '0');
+      final m = match.group(2)!.padLeft(2, '0');
+      return '$h:$m';
+    }
+    return '';
+  }
+
+  List<String> _buildUseCaseNotes(DailySummary s) {
+    final notes = <String>[];
+    final symbol = s.daySymbol.trim().toUpperCase();
+    final missingType = (s.missingType ?? '').trim().toUpperCase();
+    final finalize = (s.finalizeStatus ?? '').trim();
+
+    if (s.lateMinutes > 0 || s.earlyLeaveMinutes > 0) {
+      notes.add('Có phát sinh đi trễ/về sớm, hệ thống sẽ áp dụng quy tắc trừ công theo cấu hình HR.');
+    }
+    if (s.breakMinutesDeducted != null && s.breakMinutesDeducted! > 0) {
+      notes.add('Đã tự động trừ thời gian nghỉ giữa ca.');
+    }
+    if (symbol == 'X') {
+      notes.add('Thiếu log Check-in/Check-out. Cần đơn giải trình để tính lại công.');
+    }
+    if (missingType == 'IN') {
+      notes.add('Thiếu log Check-in.');
+    } else if (missingType == 'OUT') {
+      notes.add('Thiếu log Check-out.');
+    }
+    if (symbol == 'X/P') {
+      notes.add('Kết hợp nửa ngày công thực tế và nửa ngày nghỉ phép.');
+    }
+    if (symbol == 'P' || symbol == '1L') {
+      final leaveType = (s.leaveType ?? '').trim();
+      if (leaveType.isNotEmpty) {
+        notes.add('Ngày nghỉ phép đã được duyệt ($leaveType).');
+      } else {
+        notes.add('Ngày nghỉ phép đã được duyệt.');
+      }
+    }
+    if (symbol == 'C') {
+      notes.add('Ngày công tác đã được duyệt.');
+    }
+    if (s.isCrossDay == true) {
+      notes.add('Ca qua ngày đã được gom thành một ngày công.');
+    }
+    if (s.otEligibleMinutes > 0 && s.otApprovedMinutes <= 0) {
+      notes.add('Có thời gian ngoài giờ nhưng chưa có đơn OT duyệt nên chưa tính OT.');
+    }
+    if (s.otApprovedMinutes > 0) {
+      notes.add('Đã có OT được duyệt và được cộng theo chính sách.');
+    }
+    if (finalize.isNotEmpty) {
+      notes.add('Trạng thái chốt công: $finalize.');
+    }
+
+    return notes;
+  }
+
   @override
   Widget build(BuildContext context) {
     Color bgColor = const Color(0xFFCEF0D9); // default light green
@@ -409,73 +629,78 @@ class _TimesheetCell extends StatelessWidget {
       bgColor = Colors.white;
     }
 
-    String statusText = '';
+    String statusText = data.displaySymbol ?? '';
     Color statusColor = Colors.transparent;
 
     switch (data.status) {
       case _DayStatus.normal:
-        statusText = 'N';
+        if (statusText.isEmpty) statusText = '1';
         statusColor = const Color(0xFF2CAD61); // Green
         break;
       case _DayStatus.missing:
-        statusText = 'x';
+        if (statusText.isEmpty) statusText = 'x';
         statusColor = const Color(0xFFECAE41); // Yellow/Orange
         break;
       case _DayStatus.leave:
-        statusText = '1L';
-        statusColor = const Color(0xFFD63F3A); // Red
+        if (statusText.isEmpty) statusText = 'P';
+        statusColor = statusText == 'C'
+            ? const Color(0xFF4F8DFD) // Cong tac
+            : const Color(0xFFD63F3A); // Leave
         break;
       case _DayStatus.emptyZero:
-        statusText = '0';
+        if (statusText.isEmpty) statusText = '0';
         statusColor = Colors.black;
         break;
       case _DayStatus.none:
         break;
     }
 
-    Widget cell = Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        border: const Border(
-          right: BorderSide(color: Color(0xFFEEEEEE), width: 1),
-          bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1),
-        ),
-      ),
-      padding: const EdgeInsets.only(top: 10, bottom: 8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                data.dateStr,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-              ),
-              if (data.isPublicHoliday) ...[
-                const SizedBox(width: 2),
-                Container(
-                  width: 5,
-                  height: 5,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFE53935), // Red dot indicator
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ],
-            ],
+    Widget cell = InkWell(
+      onTap: data.summary == null ? null : () => _showDetail(context),
+      child: Container(
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: const Border(
+            right: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+            bottom: BorderSide(color: Color(0xFFEEEEEE), width: 1),
           ),
-          if (statusText.isNotEmpty)
-            Text(
-              statusText,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: statusColor,
-              ),
+        ),
+        padding: const EdgeInsets.only(top: 10, bottom: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.dateStr,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                if (data.isPublicHoliday) ...[
+                  const SizedBox(width: 2),
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE53935), // Red dot indicator
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
             ),
-        ],
+            if (statusText.isNotEmpty)
+              Text(
+                statusText,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+          ],
+        ),
       ),
     );
 

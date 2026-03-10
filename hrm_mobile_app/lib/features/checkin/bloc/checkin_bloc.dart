@@ -12,6 +12,9 @@ import 'checkin_event.dart';
 import 'checkin_state.dart';
 
 class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
+  // Backend shift time in some environments is serialized lệch -1h.
+  // Keep configurable here for quick environment alignment.
+  static const int _shiftServerHourCompensation = 1;
   final DioClient _dioClient = DioClient();
   final LocationRepository _locationRepository;
 
@@ -43,9 +46,15 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         debugPrint('- Current Time: $now');
         debugPrint('- Required End: ${state.shiftEndTime}');
 
-        if (now.isBefore(state.shiftEndTime!)) {
+        var diffMinutes = state.shiftEndTime!.difference(now).inMinutes;
+        // Some environments return shift end with a +1 day offset.
+        // Normalize unrealistic positive deltas (>12h) back to same-day expectation.
+        if (diffMinutes > 12 * 60) {
+          diffMinutes -= 24 * 60;
+        }
+
+        if (diffMinutes > 0) {
           final fmt = DateFormat('HH:mm').format(state.shiftEndTime!);
-          final diffMinutes = state.shiftEndTime!.difference(now).inMinutes;
           
           emit(
             state.copyWith(
@@ -304,7 +313,9 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           utcSecond,
         );
 
-        return todayUtc.toLocal();
+        return todayUtc.toLocal().add(
+          const Duration(hours: _shiftServerHourCompensation),
+        );
       }
 
       // Hỗ trợ nhiều định dạng từ SQL: HH:mm, HH:mm:ss, HH:mm:ss.fffffff, yyyy-MM-dd HH:mm:ss

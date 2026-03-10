@@ -5,12 +5,14 @@ import 'package:dio/dio.dart';
 import 'attendance_event.dart';
 import 'attendance_state.dart';
 import '../models/attendance_log.dart';
+import '../models/daily_summary.dart';
 import '../../../core/utils/attendance_action_resolver.dart';
 import '../../../core/utils/attendance_day_policy.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/auth/auth_helper.dart';
 
 class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
+  static const int _shiftServerHourCompensation = 1;
   final DioClient _dioClient = DioClient();
 
   AttendanceBloc() : super(AttendanceState.initial()) {
@@ -57,12 +59,45 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
 
       List<AttendanceLog> allLogs = [];
+      Map<String, DailySummary> summariesMap = {};
 
-      // Calculate number of days
+      // 1. Fetch Daily Summaries for Timesheet UI (NEW API)
+      try {
+        final fFromDate = fmt(start);
+        final fToDate = fmt(queryEnd);
+
+        final summaryResponse = await _dioClient.dio.post(
+          'attendance/mobile/daily-summary/$siteID',
+          data: {
+            'employeeId': employeeId,
+            'employeeID': employeeId,
+            'fromDate': fFromDate,
+            'toDate': fToDate,
+            'month': start.month,
+            'year': start.year,
+          },
+        );
+
+        final raw = summaryResponse.data;
+        final List<dynamic> list = raw is List
+            ? raw
+            : (raw is Map && raw['data'] is List)
+            ? (raw['data'] as List)
+            : const [];
+
+        for (var item in list) {
+          if (item is! Map) continue;
+          final summary = DailySummary.fromJson(Map<String, dynamic>.from(item));
+          if (summary.date.isEmpty) continue;
+          summariesMap[summary.date] = summary;
+        }
+      } catch (e) {
+        debugPrint('Failed to fetch daily summaries: $e');
+      }
+
+      // 2. Fetch Raw Attendance Logs for Timeline UI (Existing logic)
       final daysDiff = queryEnd.difference(start).inDays;
 
-      // Attempt to load using the optimized byEmployee endpoint first
-      // Note: Backend expects 'employeeId' (lowercase d), not 'employeeID' for this endpoint
       try {
         final fFromDate = fmt(start);
         final fToDate = fmt(queryEnd);
@@ -90,7 +125,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         debugPrint('byEmployee fallback to getScanByDay due to error: $e');
       }
 
-      // If byEmployee returned empty (possibly due to Stored Procedure limits), fallback to day-by-day
       if (allLogs.isEmpty) {
         debugPrint(
           'byEmployee returned empty, using getScanByDay loop fallback',
@@ -136,6 +170,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final finalLogs = resolved
           .map((log) => log.copyWith(userName: fullName))
           .toList();
+          
+      // Keep fetching dayPolicies for now if anything else depends on it
       final dayPolicies = await _fetchDayPolicies(
         employeeId: employeeId ?? 0,
         siteID: siteID,
@@ -147,6 +183,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         state.copyWith(
           logs: finalLogs,
           dayPolicies: dayPolicies,
+          dailySummaries: summariesMap,
           isLoading: false,
           error: null,
         ),
@@ -258,7 +295,9 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           utcMinute,
           utcSecond,
         );
-        return todayUtc.toLocal();
+        return todayUtc.toLocal().add(
+          const Duration(hours: _shiftServerHourCompensation),
+        );
       }
 
       final match = RegExp(
