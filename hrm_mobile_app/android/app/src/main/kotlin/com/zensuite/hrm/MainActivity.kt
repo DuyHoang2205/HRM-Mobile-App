@@ -1,4 +1,4 @@
-package com.example.hrm_mobile_app
+package com.zensuite.hrm
 
 import io.flutter.embedding.android.FlutterActivity
 
