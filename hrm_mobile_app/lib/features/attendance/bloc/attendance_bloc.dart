@@ -67,7 +67,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         final fToDate = fmt(queryEnd);
 
         final summaryResponse = await _dioClient.dio.post(
-          'attendance/mobile/daily-summary/$siteID',
+          'attendance/summary/$siteID',
           data: {
             'employeeId': employeeId,
             'employeeID': employeeId,
@@ -87,7 +87,9 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
 
         for (var item in list) {
           if (item is! Map) continue;
-          final summary = DailySummary.fromJson(Map<String, dynamic>.from(item));
+          final summary = DailySummary.fromJson(
+            Map<String, dynamic>.from(item),
+          );
           if (summary.date.isEmpty) continue;
           summariesMap[summary.date] = summary;
         }
@@ -170,7 +172,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final finalLogs = resolved
           .map((log) => log.copyWith(userName: fullName))
           .toList();
-          
+
       // Keep fetching dayPolicies for now if anything else depends on it
       final dayPolicies = await _fetchDayPolicies(
         employeeId: employeeId ?? 0,
@@ -223,7 +225,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           data: {'employeeID': employeeId, 'date': dayStr, 'siteID': siteID},
         );
         final ok =
-            (response.statusCode ?? 0) >= 200 && (response.statusCode ?? 0) < 300;
+            (response.statusCode ?? 0) >= 200 &&
+            (response.statusCode ?? 0) < 300;
         if (!ok || response.data is! List) continue;
         final rows = response.data as List;
         if (rows.isEmpty) continue;
