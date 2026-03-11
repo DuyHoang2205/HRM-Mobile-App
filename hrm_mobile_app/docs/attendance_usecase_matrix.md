@@ -56,3 +56,8 @@ SP hiện trả các trường chính sau (Mobile đã parse):
 - Điều kiện duyệt đơn hiện đang dùng `Status = 3` (OT/Leave) theo dữ liệu hệ thống hiện tại.
 - `PermissionType.Symbol` là nguồn xác định `P/C` trong bảng công.
 - Mobile chỉ hiển thị theo kết quả SP (Backend là nguồn sự thật).
+- Không hard-code ngưỡng công tối thiểu trong App. Ngưỡng được đọc từ `timeCalculate/workTime` theo từng ca.
+- Không hard-code mapping user test (`admin`, `baoduy`) trong CheckInBloc.
+- Runtime API và bù giờ ca có thể cấu hình bằng `--dart-define`:
+  - `API_BASE_URL`
+  - `SHIFT_HOUR_COMPENSATION`

@@ -1,7 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../app/config/app_config.dart';
 import '../../../core/auth/auth_helper.dart';
 import '../../../core/network/dio_client.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,9 +13,8 @@ import 'checkin_event.dart';
 import 'checkin_state.dart';
 
 class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
-  // Backend shift time in some environments is serialized lệch -1h.
-  // Keep configurable here for quick environment alignment.
-  static const int _shiftServerHourCompensation = 1;
+  static const int _shiftServerHourCompensation =
+      AppConfig.shiftHourCompensation;
   final DioClient _dioClient = DioClient();
   final LocationRepository _locationRepository;
 
@@ -55,7 +55,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
         if (diffMinutes > 0) {
           final fmt = DateFormat('HH:mm').format(state.shiftEndTime!);
-          
+
           emit(
             state.copyWith(
               earlyCheckoutWarningMessage:
@@ -66,7 +66,13 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         }
       }
 
-      emit(state.copyWith(isConfirming: true, errorMessage: null, earlyCheckoutWarningMessage: null));
+      emit(
+        state.copyWith(
+          isConfirming: true,
+          errorMessage: null,
+          earlyCheckoutWarningMessage: null,
+        ),
+      );
 
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
@@ -79,27 +85,28 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       }
 
       if (event.force && event.reasonCode != null) {
-        debugPrint('EARLY CHECKOUT REASON RECEIVED: ${event.reasonCode} - Note: ${event.note}');
+        debugPrint(
+          'EARLY CHECKOUT REASON RECEIVED: ${event.reasonCode} - Note: ${event.note}',
+        );
         try {
-          final shiftIdInt = int.tryParse(state.selectedShiftId ?? '') ?? 8; // fallback to CA VAN PHONG (8)
-
-           final timekeepingPayload = {
-               "employeeID": employeeId,
-               "shiftID": shiftIdInt,
-               "dateApply": DateFormat('yyyy-MM-dd').format(DateTime.now()),
-               "reason": event.reasonCode,
-               "note": event.note ?? '',
-               "fromTime": "", // Can't easily get fromTime here without fetching again, leaving empty
-               "toTime": DateFormat('HH:mm').format(DateTime.now()),
-               "siteID": siteID
-           };
-           
-          debugPrint('Sending Timekeeping Offset: $timekeepingPayload');
-          
-          await _dioClient.dio.post(
-             'timekeepingoffset',
-             data: timekeepingPayload,
-          );
+          final shiftIdInt = _resolveSelectedShiftId();
+          if (shiftIdInt != null) {
+            final timekeepingPayload = {
+              "employeeID": employeeId,
+              "shiftID": shiftIdInt,
+              "dateApply": DateFormat('yyyy-MM-dd').format(DateTime.now()),
+              "reason": event.reasonCode,
+              "note": event.note ?? '',
+              "fromTime": "",
+              "toTime": DateFormat('HH:mm').format(DateTime.now()),
+              "siteID": siteID,
+            };
+            debugPrint('Sending Timekeeping Offset: $timekeepingPayload');
+            await _dioClient.dio.post(
+              'timekeepingoffset',
+              data: timekeepingPayload,
+            );
+          }
         } catch (e) {
           debugPrint('Failed to submit timekeeping offset: $e');
           // Không block luồng ra ca chính nếu gửi giải trình lỗi
@@ -149,16 +156,26 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       final response = await _dioClient.dio.get('wordReason/GetAll/$siteId');
       final data = response.data;
       if (data is Map && data['data'] is List) {
-        final list = (data['data'] as List).map((e) => WordReasonOption(
-          code: e['CodeWordReason']?.toString() ?? '',
-          name: e['NameWordReason']?.toString() ?? '',
-        )).where((e) => e.code.isNotEmpty).toList();
+        final list = (data['data'] as List)
+            .map(
+              (e) => WordReasonOption(
+                code: e['CodeWordReason']?.toString() ?? '',
+                name: e['NameWordReason']?.toString() ?? '',
+              ),
+            )
+            .where((e) => e.code.isNotEmpty)
+            .toList();
         emit(state.copyWith(wordReasons: list));
       } else if (data is List) {
-        final list = data.map((e) => WordReasonOption(
-          code: e['CodeWordReason']?.toString() ?? '',
-          name: e['NameWordReason']?.toString() ?? '',
-        )).where((e) => e.code.isNotEmpty).toList();
+        final list = data
+            .map(
+              (e) => WordReasonOption(
+                code: e['CodeWordReason']?.toString() ?? '',
+                name: e['NameWordReason']?.toString() ?? '',
+              ),
+            )
+            .where((e) => e.code.isNotEmpty)
+            .toList();
         emit(state.copyWith(wordReasons: list));
       }
     } catch (e) {
@@ -168,7 +185,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
   Future<void> _fetchShiftInfo(Emitter<CheckInState> emit) async {
     try {
-      final employeeId = await _resolveEmployeeIdForDebug();
+      final employeeId = await AuthHelper.getEmployeeId();
       final siteId = await AuthHelper.getSiteId();
 
       if (employeeId == null) return;
@@ -205,12 +222,8 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
             'fromtime',
           ]);
           final toRaw = _pickAny(row, const ['toTime', 'ToTime', 'totime']);
-          final from = _parseBackendTime(
-            fromRaw?.toString(),
-          );
-          final to = _parseBackendTime(
-            toRaw?.toString(),
-          );
+          final from = _parseBackendTime(fromRaw?.toString());
+          final to = _parseBackendTime(toRaw?.toString());
 
           DateTime? normalizedTo;
           if (from != null && to != null) {
@@ -219,8 +232,12 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           }
 
           final title =
-              (_pickAny(row, const ['title', 'Title', 'code', 'Code']))
-                  ?.toString() ??
+              (_pickAny(row, const [
+                'title',
+                'Title',
+                'code',
+                'Code',
+              ]))?.toString() ??
               'Ca làm việc';
           final id = (_pickAny(row, const ['id', 'ID']) ?? title).toString();
 
@@ -343,7 +360,10 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
   List<Map<String, dynamic>> _extractRows(dynamic data) {
     if (data is List) {
-      return data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      return data
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
     }
     if (data is Map) {
       final nested = data['data'];
@@ -364,14 +384,13 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     return null;
   }
 
-  Future<int?> _resolveEmployeeIdForDebug() async {
-    final storedEmployeeId = await AuthHelper.getEmployeeId();
-    if (!kDebugMode) return storedEmployeeId;
-
-    final username = (await AuthHelper.getUserName())?.toLowerCase().trim();
-    if (username == 'admin') return 2;
-    if (username == 'baoduy') return 3195;
-    return storedEmployeeId;
+  int? _resolveSelectedShiftId() {
+    final direct = int.tryParse(state.selectedShiftId ?? '');
+    if (direct != null && direct > 0) return direct;
+    if (state.options.isEmpty) return null;
+    final fallback = int.tryParse(state.options.first.id);
+    if (fallback != null && fallback > 0) return fallback;
+    return null;
   }
 
   Future<void> _onRefreshLocation(

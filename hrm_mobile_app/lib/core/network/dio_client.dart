@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import '../../app/config/app_config.dart';
 import '../../core/auth/auth_helper.dart';
 import '../../main.dart';
 import '../../features/auth/view/login_screen.dart';
@@ -8,12 +9,9 @@ class DioClient {
   late final Dio dio;
 
   DioClient() {
-    // ─── BACKEND URL CONFIG ───────────────────────────────────────────
-    const localUrl = 'http://localhost:3004/api/';
-
     dio = Dio(
       BaseOptions(
-        baseUrl: localUrl,
+        baseUrl: AppConfig.apiBaseUrl,
 
         validateStatus: (status) {
           if (status == null) return false;
@@ -32,7 +30,9 @@ class DioClient {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          debugPrint('HTTP ${options.method} => ${options.baseUrl}${options.path}');
+          debugPrint(
+            'HTTP ${options.method} => ${options.baseUrl}${options.path}',
+          );
           return handler.next(options);
         },
         onError: (DioException error, ErrorInterceptorHandler handler) async {

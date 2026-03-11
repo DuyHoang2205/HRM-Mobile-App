@@ -65,7 +65,7 @@ class _TimesheetPageState extends State<TimesheetPage>
                 children: const [
                   _MonthlyTimesheetTab(),
                   _WeeklyTimesheetTab(),
-                  Center(child: Text('Đang phát triểnThống kê')),
+                  Center(child: Text('Đang phát triển: Thống kê')),
                   Center(child: Text('Đang phát triển: Danh sách')),
                 ],
               ),
@@ -258,21 +258,21 @@ class _MonthlyTimesheetTab extends StatelessWidget {
         if (dailySummaries.containsKey(key)) {
           summary = dailySummaries[key]!;
           displaySymbol = summary.daySymbol;
-          
+
           if (summary.daySymbol == '0') {
-             status = _DayStatus.none; // Empty day
+            status = _DayStatus.none; // Empty day
           } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
             status = _DayStatus.normal;
           } else if (summary.daySymbol.contains('x')) {
             status = _DayStatus.missing;
           } else {
-             status = _DayStatus.leave;
+            status = _DayStatus.leave;
           }
         } else if (current.compareTo(todayDate) <= 0) {
-           if (!isSunday && !isSaturday) {
-               status = _DayStatus.missing;
-               displaySymbol = 'x';
-           }
+          if (!isSunday && !isSaturday) {
+            status = _DayStatus.missing;
+            displaySymbol = 'x';
+          }
         }
       }
 
@@ -391,19 +391,19 @@ class _WeeklyTimesheetTab extends StatelessWidget {
           displaySymbol = summary.daySymbol;
 
           if (summary.daySymbol == '0') {
-             status = _DayStatus.none; // Empty day
+            status = _DayStatus.none; // Empty day
           } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
             status = _DayStatus.normal;
           } else if (summary.daySymbol.contains('x')) {
             status = _DayStatus.missing;
           } else {
-             status = _DayStatus.leave;
+            status = _DayStatus.leave;
           }
         } else if (current.compareTo(todayDate) <= 0) {
-           if (!isSunday && !isSaturday) {
-               status = _DayStatus.missing;
-               displaySymbol = 'x';
-           }
+          if (!isSunday && !isSaturday) {
+            status = _DayStatus.missing;
+            displaySymbol = 'x';
+          }
         }
       }
 
@@ -507,7 +507,7 @@ class _TimesheetCell extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Ký hiệu: ${summary.daySymbol}'),
-            Text('${_buildShiftLabel(summary)}'),
+            Text(_buildShiftLabel(summary)),
             Text('Vào đầu tiên: ${v(summary.firstIn)}'),
             Text('Ra cuối cùng: ${v(summary.lastOut)}'),
             Text('Giờ làm thực tế: $worked'),
@@ -551,7 +551,7 @@ class _TimesheetCell extends StatelessWidget {
 
     final name = title.isNotEmpty
         ? title
-        : (code.isNotEmpty ? '$code' : 'Chưa có thông tin');
+        : (code.isNotEmpty ? code : 'Chưa có thông tin');
     if (!hasRange) return name;
     return '$name ($from - $to)';
   }
@@ -575,13 +575,17 @@ class _TimesheetCell extends StatelessWidget {
     final finalize = (s.finalizeStatus ?? '').trim();
 
     if (s.lateMinutes > 0 || s.earlyLeaveMinutes > 0) {
-      notes.add('Có phát sinh đi trễ/về sớm, hệ thống sẽ áp dụng quy tắc trừ công theo cấu hình HR.');
+      notes.add(
+        'Có phát sinh đi trễ/về sớm, hệ thống sẽ áp dụng quy tắc trừ công theo cấu hình HR.',
+      );
     }
     if (s.breakMinutesDeducted != null && s.breakMinutesDeducted! > 0) {
       notes.add('Đã tự động trừ thời gian nghỉ giữa ca.');
     }
     if (symbol == 'X') {
-      notes.add('Thiếu log Check-in/Check-out. Cần đơn giải trình để tính lại công.');
+      notes.add(
+        'Thiếu log Check-in/Check-out. Cần đơn giải trình để tính lại công.',
+      );
     }
     if (missingType == 'IN') {
       notes.add('Thiếu log Check-in.');
@@ -606,7 +610,9 @@ class _TimesheetCell extends StatelessWidget {
       notes.add('Ca qua ngày đã được gom thành một ngày công.');
     }
     if (s.otEligibleMinutes > 0 && s.otApprovedMinutes <= 0) {
-      notes.add('Có thời gian ngoài giờ nhưng chưa có đơn OT duyệt nên chưa tính OT.');
+      notes.add(
+        'Có thời gian ngoài giờ nhưng chưa có đơn OT duyệt nên chưa tính OT.',
+      );
     }
     if (s.otApprovedMinutes > 0) {
       notes.add('Đã có OT được duyệt và được cộng theo chính sách.');
