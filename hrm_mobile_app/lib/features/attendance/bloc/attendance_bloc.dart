@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
+import '../../../app/config/app_config.dart';
 import 'attendance_event.dart';
 import 'attendance_state.dart';
 import '../models/attendance_log.dart';
@@ -12,7 +13,8 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/auth/auth_helper.dart';
 
 class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
-  static const int _shiftServerHourCompensation = 1;
+  static const int _shiftServerHourCompensation =
+      AppConfig.shiftHourCompensation;
   final DioClient _dioClient = DioClient();
 
   AttendanceBloc() : super(AttendanceState.initial()) {
@@ -65,17 +67,13 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       try {
         final fFromDate = fmt(start);
         final fToDate = fmt(queryEnd);
-
-        final summaryResponse = await _dioClient.dio.post(
-          'attendance/summary/$siteID',
-          data: {
-            'employeeId': employeeId,
-            'employeeID': employeeId,
-            'fromDate': fFromDate,
-            'toDate': fToDate,
-            'month': start.month,
-            'year': start.year,
-          },
+        final summaryResponse = await _fetchDailySummary(
+          siteID: siteID,
+          employeeId: employeeId,
+          fromDate: fFromDate,
+          toDate: fToDate,
+          month: start.month,
+          year: start.year,
         );
 
         final raw = summaryResponse.data;
@@ -85,6 +83,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
             ? (raw['data'] as List)
             : const [];
 
+        _debug('[DailySummary] list length = ${list.length}');
         for (var item in list) {
           if (item is! Map) continue;
           final summary = DailySummary.fromJson(
@@ -92,9 +91,13 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           );
           if (summary.date.isEmpty) continue;
           summariesMap[summary.date] = summary;
+          _debug(
+            '[DailySummary] loaded key=${summary.date} symbol=${summary.daySymbol}',
+          );
         }
-      } catch (e) {
-        debugPrint('Failed to fetch daily summaries: $e');
+        _debug('[DailySummary] total keys = ${summariesMap.keys.length}');
+      } catch (e, st) {
+        _debug('Failed to fetch daily summaries: $e\n$st');
       }
 
       // 2. Fetch Raw Attendance Logs for Timeline UI (Existing logic)
@@ -124,13 +127,11 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           }
         }
       } catch (e) {
-        debugPrint('byEmployee fallback to getScanByDay due to error: $e');
+        _debug('byEmployee fallback to getScanByDay due to error: $e');
       }
 
       if (allLogs.isEmpty) {
-        debugPrint(
-          'byEmployee returned empty, using getScanByDay loop fallback',
-        );
+        _debug('byEmployee returned empty, using getScanByDay loop fallback');
         List<Future<Response>> futures = [];
         for (int i = 0; i <= daysDiff; i++) {
           final date = start.add(Duration(days: i));
@@ -192,8 +193,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       );
     } catch (e, s) {
       // Never let loading hang
-      debugPrint('Attendance fetch error: $e');
-      debugPrint(s.toString());
+      _debug('Attendance fetch error: $e');
+      _debug(s.toString());
 
       emit(
         state.copyWith(
@@ -315,5 +316,45 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     } catch (_) {
       return null;
     }
+  }
+
+  Future<Response<dynamic>> _fetchDailySummary({
+    required String siteID,
+    required int? employeeId,
+    required String fromDate,
+    required String toDate,
+    required int month,
+    required int year,
+  }) async {
+    final payload = {
+      'employeeId': employeeId,
+      'fromDate': fromDate,
+      'toDate': toDate,
+    };
+
+    try {
+      // Primary route in current backend:
+      // POST /attendance/summary/:siteID (AttendanceController.getDailySummary)
+      return await _dioClient.dio.post(
+        'attendance/summary/$siteID',
+        data: payload,
+      );
+    } catch (_) {
+      // Backward compatibility for older environments.
+      return _dioClient.dio.post(
+        'attendance/mobile/daily-summary/$siteID',
+        data: {
+          ...payload,
+          'employeeID': employeeId,
+          'month': month,
+          'year': year,
+        },
+      );
+    }
+  }
+
+  void _debug(String message) {
+    if (!kDebugMode) return;
+    debugPrint(message);
   }
 }

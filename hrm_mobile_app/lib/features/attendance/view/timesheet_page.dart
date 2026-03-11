@@ -233,7 +233,7 @@ class _MonthlyTimesheetTab extends StatelessWidget {
     final now = DateTime.now();
     final todayStr =
         "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    final todayDate = DateTime(now.year, now.month, now.day);
+    // todayDate used for isToday cell highlight only
 
     List<_TimesheetCellData> result = [];
     for (int i = 0; i < totalCells; i++) {
@@ -268,11 +268,10 @@ class _MonthlyTimesheetTab extends StatelessWidget {
           } else {
             status = _DayStatus.leave;
           }
-        } else if (current.compareTo(todayDate) <= 0) {
-          if (!isSunday && !isSaturday) {
-            status = _DayStatus.missing;
-            displaySymbol = 'x';
-          }
+        } else {
+          // Ngày trong tháng nhưng không có data từ API → để trống, không tự gán 'x'
+          // (tránh false positive khi API chưa load xong hoặc ngày chưa có log)
+          status = _DayStatus.none;
         }
       }
 
