@@ -28,7 +28,10 @@ class AttendanceTimesheetDateChanged extends AttendanceEvent {
   final DateTime start;
   final DateTime end;
 
-  const AttendanceTimesheetDateChanged({required this.start, required this.end});
+  const AttendanceTimesheetDateChanged({
+    required this.start,
+    required this.end,
+  });
 
   @override
   List<Object?> get props => [start, end];
@@ -48,16 +51,29 @@ class AttendanceCheckResultArrived extends AttendanceEvent {
 }
 
 class AttendanceChangeSubmitted extends AttendanceEvent {
-  final String date;  // YYYY-MM-DD
-  final String time;  // HH:MM:SS
+  final String date; // YYYY-MM-DD
+  final String time; // HH:MM:SS
+  final int shiftID;
   final String reason;
+  final String note;
+  final List<String> attachmentPaths;
 
   const AttendanceChangeSubmitted({
     required this.date,
     required this.time,
+    required this.shiftID,
     required this.reason,
+    this.note = '',
+    this.attachmentPaths = const [],
   });
 
   @override
-  List<Object?> get props => [date, time, reason];
+  List<Object?> get props => [
+    date,
+    time,
+    shiftID,
+    reason,
+    note,
+    attachmentPaths,
+  ];
 }

@@ -7,19 +7,39 @@ import '../bloc/leave_state.dart';
 import '../../../core/auth/auth_helper.dart';
 
 class LeaveRegistrationPage extends StatelessWidget {
-  const LeaveRegistrationPage({super.key});
+  final String pageTitle;
+  final String? forcePermissionSymbol;
+
+  const LeaveRegistrationPage({
+    super.key,
+    this.pageTitle = 'Đăng ký nghỉ',
+    this.forcePermissionSymbol,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isBusinessTripMode =
+        forcePermissionSymbol?.trim().toUpperCase() == 'C';
     return BlocProvider(
-      create: (_) => LeaveBloc()..add(const LeaveStarted()),
-      child: const _LeaveRegistrationView(),
+      create: (_) =>
+          LeaveBloc(businessTripMode: isBusinessTripMode)
+            ..add(const LeaveStarted()),
+      child: _LeaveRegistrationView(
+        pageTitle: pageTitle,
+        forcePermissionSymbol: forcePermissionSymbol,
+      ),
     );
   }
 }
 
 class _LeaveRegistrationView extends StatefulWidget {
-  const _LeaveRegistrationView();
+  final String pageTitle;
+  final String? forcePermissionSymbol;
+
+  const _LeaveRegistrationView({
+    required this.pageTitle,
+    required this.forcePermissionSymbol,
+  });
 
   @override
   State<_LeaveRegistrationView> createState() => _LeaveRegistrationViewState();
@@ -34,6 +54,7 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
 
   // permissionType là số nguyên (ID), được load từ state.permissionTypes (API)
   int? _selectedPermissionTypeId;
+  bool _didAutoBindPermission = false;
 
   final TextEditingController _descCtrl = TextEditingController();
   final List<String> _attachedFiles = [];
@@ -63,9 +84,9 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text(
-            'Đăng ký nghỉ',
-            style: TextStyle(
+          title: Text(
+            widget.pageTitle,
+            style: const TextStyle(
               color: Color(0xFF0B1B2B),
               fontWeight: FontWeight.bold,
             ),
@@ -155,8 +176,9 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                   _buildLabel('Thời gian nghỉ'),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
+                    key: ValueKey(_halfDayOption),
                     dropdownColor: Colors.white,
-                    value: _halfDayOption,
+                    initialValue: _halfDayOption,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -192,7 +214,12 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                   const SizedBox(height: 16),
                 ],
 
-                _buildLabel('Lý do / Loại phép', required: true),
+                _buildLabel(
+                  widget.forcePermissionSymbol == null
+                      ? 'Lý do / Loại phép'
+                      : 'Loại đơn',
+                  required: true,
+                ),
                 const SizedBox(height: 8),
                 // Dropdown load từ state.permissionTypes (API thật, không hardcode)
                 BlocBuilder<LeaveBloc, LeaveState>(
@@ -200,8 +227,29 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                       prev.permissionTypes != cur.permissionTypes ||
                       prev.isLoading != cur.isLoading,
                   builder: (context, state) {
+                    _tryAutoBindPermissionType(state);
                     if (state.isLoading && state.permissionTypes.isEmpty) {
                       return const LinearProgressIndicator();
+                    }
+                    if (widget.forcePermissionSymbol != null) {
+                      final selected = state.permissionTypes
+                          .where((e) => e.id == _selectedPermissionTypeId)
+                          .firstOrNull;
+                      return TextFormField(
+                        enabled: false,
+                        initialValue:
+                            selected?.permissionType ?? 'Đang tải loại đơn...',
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                      );
                     }
                     return DropdownButtonFormField<int>(
                       // Ép menu xổ xuống có chiều cao tối đa và có thể cuộn
@@ -517,6 +565,19 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
         );
         return;
       }
+      if (_selectedPermissionTypeId == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Không tìm thấy loại đơn phù hợp. Vui lòng kiểm tra PermissionType.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
 
       // Lấy thông tin user từ secure session — không hardcode
       final employeeId = await AuthHelper.getEmployeeId();
@@ -570,5 +631,25 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
         context.read<LeaveBloc>().add(LeaveRequestSubmitted(req));
       }
     }
+  }
+
+  void _tryAutoBindPermissionType(LeaveState state) {
+    final forceSymbol = widget.forcePermissionSymbol?.trim().toUpperCase();
+    if (_didAutoBindPermission || forceSymbol == null || forceSymbol.isEmpty) {
+      return;
+    }
+    if (state.permissionTypes.isEmpty) return;
+
+    final match = state.permissionTypes
+        .where((e) => e.symbol.trim().toUpperCase() == forceSymbol)
+        .firstOrNull;
+    if (match != null) {
+      setState(() {
+        _selectedPermissionTypeId = match.id;
+        _didAutoBindPermission = true;
+      });
+      return;
+    }
+    _didAutoBindPermission = true;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import '../../../app/config/app_config.dart';
@@ -31,43 +32,122 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     AttendanceChangeSubmitted event,
     Emitter<AttendanceState> emit,
   ) async {
-    emit(state.copyWith(isSubmittingChange: true, error: '', changeSuccessMessage: ''));
+    emit(
+      state.copyWith(
+        isSubmittingChange: true,
+        error: '',
+        changeSuccessMessage: '',
+      ),
+    );
     try {
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
       final createdBy = await AuthHelper.getStaffCode() ?? 'admin';
 
       final String timeString = "${event.date}T${event.time}";
+      final response = await _submitAttendanceChange(
+        employeeId: employeeId,
+        siteID: siteID,
+        createdBy: createdBy,
+        date: event.date,
+        timeString: timeString,
+        shiftID: event.shiftID,
+        reason: event.reason,
+        note: event.note,
+        attachmentPaths: event.attachmentPaths,
+      );
 
-      final body = {
-        "employeeID": employeeId,
-        "authDate": event.date,
-        "authTime": timeString,
-        "createdBy": createdBy,
-        "siteID": siteID,
-        "reason": event.reason, // BE might not use it directly in DTO, but can save to log
-      };
-
-      final response = await _dioClient.dio.post('attendance/change/$siteID', data: body);
-      
       if (response.statusCode == 200 || response.statusCode == 201) {
-        emit(state.copyWith(
-          isSubmittingChange: false,
-          changeSuccessMessage: 'Đã gửi giải trình thành công',
-        ));
+        emit(
+          state.copyWith(
+            isSubmittingChange: false,
+            changeSuccessMessage: 'Đã gửi giải trình thành công',
+          ),
+        );
       } else {
-        emit(state.copyWith(
-          isSubmittingChange: false,
-          error: 'Gửi thất bại, vui lòng thử lại',
-        ));
+        emit(
+          state.copyWith(
+            isSubmittingChange: false,
+            error: 'Gửi thất bại, vui lòng thử lại',
+          ),
+        );
       }
     } catch (e) {
       _debug("Submit change error: $e");
-      emit(state.copyWith(
-        isSubmittingChange: false,
-        error: 'Lỗi khi gửi giải trình: $e',
-      ));
+      emit(
+        state.copyWith(
+          isSubmittingChange: false,
+          error: 'Lỗi khi gửi giải trình: $e',
+        ),
+      );
     }
+  }
+
+  Future<Response<dynamic>> _submitAttendanceChange({
+    required int? employeeId,
+    required String siteID,
+    required String createdBy,
+    required String date,
+    required String timeString,
+    required int shiftID,
+    required String reason,
+    required String note,
+    required List<String> attachmentPaths,
+  }) async {
+    final responseOffset = await _dioClient.dio.post(
+      'timekeepingOffset',
+      data: {
+        'employeeID': employeeId,
+        'status': 0,
+        'dateApply': date,
+        'shiftID': shiftID,
+        'reason': reason,
+        'note': note,
+        'fromTime': timeString,
+        'toTime': timeString,
+        'requestBy': employeeId,
+        'createBy': createdBy,
+        'updateBy': createdBy,
+        'siteID': siteID,
+      },
+    );
+
+    final cleanedPaths = attachmentPaths
+        .where((path) => path.trim().isNotEmpty)
+        .toList();
+
+    if (cleanedPaths.isEmpty) {
+      return responseOffset;
+    }
+
+    final files = <MultipartFile>[];
+    for (final path in cleanedPaths) {
+      final file = File(path);
+      if (!file.existsSync()) continue;
+      files.add(
+        await MultipartFile.fromFile(path, filename: _fileNameFromPath(path)),
+      );
+    }
+
+    final formData = FormData.fromMap({
+      "employeeID": employeeId,
+      "authDate": date,
+      "authTime": timeString,
+      "createdBy": createdBy,
+      "siteID": siteID,
+      "reason": reason,
+      // `files` is the standard key expected by most NestJS upload interceptors.
+      "files": files,
+    });
+
+    await _dioClient.dio.post('attendance/change/$siteID', data: formData);
+    return responseOffset;
+  }
+
+  String _fileNameFromPath(String path) {
+    final normalized = path.replaceAll('\\', '/');
+    final segments = normalized.split('/');
+    return segments.isEmpty ? path : segments.last;
   }
 
   Future<void> _onTimesheetDateChanged(
@@ -78,7 +158,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
 
-      String fmt(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+      String fmt(DateTime d) =>
+          "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
 
       final summaryResponse = await _fetchDailySummary(
         siteID: siteID,
@@ -459,30 +540,145 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         year: year,
         siteID: siteID,
       );
-      
+      final permissionTypes = await leaveRepo.getPermissionTypes(siteID);
+      final symbolByPermissionId = <int, String>{
+        for (final p in permissionTypes) p.id: p.symbol.trim().toUpperCase(),
+      };
+
       final approvedLeaves = leaves.where((l) => l.status == 3).toList();
+      _debug('[Overlay] ${approvedLeaves.length} approved leaves to overlay');
       for (var leave in approvedLeaves) {
-        DateTime current = DateTime(leave.fromDate.year, leave.fromDate.month, leave.fromDate.day);
-        final end = DateTime(leave.toDate.year, leave.toDate.month, leave.toDate.day);
-        
+        DateTime current = DateTime(
+          leave.fromDate.year,
+          leave.fromDate.month,
+          leave.fromDate.day,
+        );
+        final end = DateTime(
+          leave.toDate.year,
+          leave.toDate.month,
+          leave.toDate.day,
+        );
+        final isMultiDay =
+            leave.fromDate.year != leave.toDate.year ||
+            leave.fromDate.month != leave.toDate.month ||
+            leave.fromDate.day != leave.toDate.day;
+        final leaveSymbol =
+            symbolByPermissionId[leave.permissionType]?.trim().toUpperCase() ??
+            'P';
+        final isBusinessTrip = leaveSymbol == 'C';
+        final isFullDayLeave = isMultiDay || leave.qty >= 1;
+
         while (current.compareTo(end) <= 0) {
-          final dateStr = "${current.year}-${current.month.toString().padLeft(2, '0')}-${current.day.toString().padLeft(2, '0')}";
-          
-          if (!map.containsKey(dateStr) || map[dateStr]!.daySymbol == '0') {
+          final dateStr =
+              "${current.year}-${current.month.toString().padLeft(2, '0')}-${current.day.toString().padLeft(2, '0')}";
+          final existing = map[dateStr];
+
+          final existingSymbol = existing?.daySymbol.trim().toUpperCase() ?? '';
+          final isMissingOrEmpty =
+              existing == null ||
+              existingSymbol.isEmpty ||
+              existingSymbol == '0' ||
+              existingSymbol == 'X';
+
+          if (isBusinessTrip) {
+            // Business trip always has highest display priority on timesheet.
+            map[dateStr] = DailySummary(
+              date: dateStr,
+              daySymbol: 'C',
+              requiredHours: existing?.requiredHours ?? 8.0,
+              lateMinutes: 0,
+              earlyLeaveMinutes: 0,
+              shiftCode: existing?.shiftCode,
+              shiftTitle: existing?.shiftTitle,
+              shiftFromTime: existing?.shiftFromTime,
+              shiftToTime: existing?.shiftToTime,
+              firstIn: existing?.firstIn,
+              lastOut: existing?.lastOut,
+              rawWorkedHours: existing?.rawWorkedHours,
+              breakMinutesDeducted: existing?.breakMinutesDeducted,
+              timeCalculate: existing?.timeCalculate,
+              otEligibleMinutes: existing?.otEligibleMinutes ?? 0,
+              otApprovedMinutes: existing?.otApprovedMinutes ?? 0,
+              isCrossDay: existing?.isCrossDay,
+              missingType: existing?.missingType,
+              workFraction: existing?.workFraction,
+              leaveFraction: leave.qty,
+              leaveType: leave.description,
+              businessTripCode:
+                  existing?.businessTripCode ?? leave.permissionType.toString(),
+              finalizeStatus: existing?.finalizeStatus,
+            );
+            _debug(
+              '[Overlay] Force C on $dateStr (prev: ${existing?.daySymbol})',
+            );
+          } else if (isFullDayLeave) {
+            // Full-day leave has highest priority.
             map[dateStr] = DailySummary(
               date: dateStr,
               daySymbol: 'P',
               requiredHours: 8.0,
               lateMinutes: 0,
               earlyLeaveMinutes: 0,
-              leaveType: 'Đã duyệt',
+              shiftCode: existing?.shiftCode,
+              shiftTitle: existing?.shiftTitle,
+              shiftFromTime: existing?.shiftFromTime,
+              shiftToTime: existing?.shiftToTime,
+              leaveType: leave.description,
             );
+            _debug(
+              '[Overlay] Force P on $dateStr (prev: ${existing?.daySymbol})',
+            );
+          } else if (isMissingOrEmpty) {
+            // Half-day leave on empty/missing day -> mark as leave.
+            map[dateStr] = DailySummary(
+              date: dateStr,
+              daySymbol: 'P',
+              requiredHours: 8.0,
+              lateMinutes: 0,
+              earlyLeaveMinutes: 0,
+              shiftCode: existing?.shiftCode,
+              shiftTitle: existing?.shiftTitle,
+              shiftFromTime: existing?.shiftFromTime,
+              shiftToTime: existing?.shiftToTime,
+              leaveType: leave.description,
+            );
+            _debug(
+              '[Overlay] Add P on $dateStr (prev: ${existing?.daySymbol})',
+            );
+          } else {
+            // Half-day leave + existing attendance -> x/P
+            map[dateStr] = DailySummary(
+              date: dateStr,
+              daySymbol: 'x/P',
+              requiredHours: existing.requiredHours,
+              lateMinutes: existing.lateMinutes,
+              earlyLeaveMinutes: existing.earlyLeaveMinutes,
+              shiftCode: existing.shiftCode,
+              shiftTitle: existing.shiftTitle,
+              shiftFromTime: existing.shiftFromTime,
+              shiftToTime: existing.shiftToTime,
+              firstIn: existing.firstIn,
+              lastOut: existing.lastOut,
+              rawWorkedHours: existing.rawWorkedHours,
+              breakMinutesDeducted: existing.breakMinutesDeducted,
+              timeCalculate: existing.timeCalculate,
+              otEligibleMinutes: existing.otEligibleMinutes,
+              otApprovedMinutes: existing.otApprovedMinutes,
+              isCrossDay: existing.isCrossDay,
+              missingType: existing.missingType,
+              workFraction: existing.workFraction,
+              leaveFraction: leave.qty,
+              leaveType: leave.description,
+              businessTripCode: existing.businessTripCode,
+              finalizeStatus: existing.finalizeStatus,
+            );
+            _debug('[Overlay] Merge half-day leave -> x/P on $dateStr');
           }
           current = current.add(const Duration(days: 1));
         }
       }
-    } catch (e) {
-      _debug('Overlay leave error: $e');
+    } catch (e, st) {
+      _debug('Overlay leave error: $e\n$st');
     }
   }
 }

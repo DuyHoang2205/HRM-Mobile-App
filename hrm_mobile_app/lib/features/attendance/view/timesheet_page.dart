@@ -108,13 +108,13 @@ class _TimesheetPageState extends State<TimesheetPage>
             _buildLegendItem(
               '0',
               'Lỗi công (thiếu In/Out) / Không phát sinh công',
-              const Color(0xFFECAE41), 
+              const Color(0xFFECAE41),
             ),
             const SizedBox(height: 12),
             _buildLegendItem(
               'x/P',
               'Nửa ngày công + nửa ngày phép',
-              const Color(0xFFECAE41), 
+              const Color(0xFFECAE41),
             ),
             const SizedBox(height: 12),
             _buildLegendItem('P', 'Nghỉ phép', const Color(0xFFD63F3A)),
@@ -224,15 +224,25 @@ class _MonthlyTimesheetTabState extends State<_MonthlyTimesheetTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left, color: Color(0xFF0B1B2B)),
+                    icon: const Icon(
+                      Icons.chevron_left,
+                      color: Color(0xFF0B1B2B),
+                    ),
                     onPressed: _prevMonth,
                   ),
                   Text(
                     'Tháng ${_currentMonth.month.toString().padLeft(2, '0')}/${_currentMonth.year}',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00C389)),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF00C389),
+                    ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right, color: Color(0xFF0B1B2B)),
+                    icon: const Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFF0B1B2B),
+                    ),
                     onPressed: _nextMonth,
                   ),
                 ],
@@ -312,19 +322,30 @@ class _MonthlyTimesheetTabState extends State<_MonthlyTimesheetTab> {
       if (isCurrentMonth) {
         if (dailySummaries.containsKey(key)) {
           summary = dailySummaries[key]!;
-          displaySymbol = summary.daySymbol;
-
-          if (summary.daySymbol == '0') {
-            status = _DayStatus.none; // Empty day
-          } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
-            status = _DayStatus.normal;
-          } else if (summary.daySymbol.contains('x')) {
-            status = _DayStatus.missing;
-            displaySymbol = (summary.daySymbol == 'x') ? '0' : summary.daySymbol;
+          final symbol = summary.daySymbol.trim();
+          final isFutureDate = current.isAfter(todayDate);
+          if (isFutureDate && symbol == '0') {
+            status = _DayStatus.none;
+            summary = null;
+            displaySymbol = '';
           } else {
-            status = _DayStatus.leave;
+            displaySymbol = summary.daySymbol;
+
+            if (summary.daySymbol == '0' ||
+                summary.daySymbol.toLowerCase() == 'x') {
+              status = _DayStatus.missing;
+              displaySymbol = '0';
+            } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
+              status = _DayStatus.normal;
+            } else if (summary.daySymbol.toLowerCase().contains('x')) {
+              status = _DayStatus.missing;
+              displaySymbol = summary.daySymbol;
+            } else {
+              status = _DayStatus.leave;
+            }
           }
         } else if (current.compareTo(todayDate) <= 0) {
+          // Chỉ hiện 0 cho ngày trong tuần (T2-T6)
           if (!isSunday && !isSaturday) {
             status = _DayStatus.missing;
             displaySymbol = '0';
@@ -380,7 +401,11 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
     super.initState();
     final now = DateTime.now();
     final offset = now.weekday - 1;
-    _currentWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: offset));
+    _currentWeekStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: offset));
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchWeek());
   }
 
@@ -407,7 +432,8 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
 
   String _weekLabel() {
     final end = _currentWeekStart.add(const Duration(days: 6));
-    String f(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+    String f(DateTime d) =>
+        '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
     return '${f(_currentWeekStart)} - ${f(end)}';
   }
 
@@ -430,15 +456,25 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left, color: Color(0xFF0B1B2B)),
+                    icon: const Icon(
+                      Icons.chevron_left,
+                      color: Color(0xFF0B1B2B),
+                    ),
                     onPressed: _prevWeek,
                   ),
                   Text(
                     _weekLabel(),
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00C389)),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF00C389),
+                    ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right, color: Color(0xFF0B1B2B)),
+                    icon: const Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFF0B1B2B),
+                    ),
                     onPressed: _nextWeek,
                   ),
                 ],
@@ -495,10 +531,10 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
     List<_TimesheetCellData> result = [];
     for (int i = 0; i < 7; i++) {
       final current = startOfWeek.add(Duration(days: i));
+      final isCurrentMonthCell = current.month == startOfWeek.month;
       final key =
           "${current.year}-${current.month.toString().padLeft(2, '0')}-${current.day.toString().padLeft(2, '0')}";
 
-      bool isCurrentMonth = current.month == todayDate.month;
       bool isSunday = current.weekday == 7;
       bool isSaturday = current.weekday == 6;
       bool isPublicHoliday =
@@ -511,33 +547,41 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
       String displaySymbol = '';
       DailySummary? summary;
 
-      if (isCurrentMonth) {
-        if (dailySummaries.containsKey(key)) {
-          summary = dailySummaries[key]!;
+      if (dailySummaries.containsKey(key)) {
+        summary = dailySummaries[key]!;
+        final symbol = summary.daySymbol.trim();
+        final isFutureDate = current.isAfter(todayDate);
+        if (isFutureDate && symbol == '0') {
+          status = _DayStatus.none;
+          summary = null;
+          displaySymbol = '';
+        } else {
           displaySymbol = summary.daySymbol;
 
-          if (summary.daySymbol == '0') {
-            status = _DayStatus.none; // Empty day
+          if (summary.daySymbol == '0' ||
+              summary.daySymbol.toLowerCase() == 'x') {
+            status = _DayStatus.missing;
+            displaySymbol = '0';
           } else if (summary.daySymbol == '1' || summary.daySymbol == '1.0') {
             status = _DayStatus.normal;
-          } else if (summary.daySymbol.contains('x')) {
+          } else if (summary.daySymbol.toLowerCase().contains('x')) {
             status = _DayStatus.missing;
-            displaySymbol = '0'; // Hiển thị đè 0 thay vì x
+            displaySymbol = summary.daySymbol;
           } else {
             status = _DayStatus.leave;
           }
-        } else if (current.compareTo(todayDate) <= 0) {
-          if (!isSunday && !isSaturday) {
-            status = _DayStatus.missing;
-            displaySymbol = '0';
-            summary = DailySummary(
-              date: key,
-              daySymbol: '0',
-              requiredHours: 8.0,
-              lateMinutes: 0,
-              earlyLeaveMinutes: 0,
-            );
-          }
+        }
+      } else if (current.compareTo(todayDate) <= 0) {
+        if (!isSunday && !isSaturday) {
+          status = _DayStatus.missing;
+          displaySymbol = '0';
+          summary = DailySummary(
+            date: key,
+            daySymbol: '0',
+            requiredHours: 8.0,
+            lateMinutes: 0,
+            earlyLeaveMinutes: 0,
+          );
         }
       }
 
@@ -555,7 +599,7 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
           isToday: key == todayStr,
           isHoliday: isSunday || isSaturday,
           isPublicHoliday: isPublicHoliday,
-          isCurrentMonth: isCurrentMonth,
+          isCurrentMonth: isCurrentMonthCell,
         ),
       );
     }
@@ -624,14 +668,13 @@ class _TimesheetCell extends StatelessWidget {
   void _showDetail(BuildContext context) {
     final summary = data.summary;
     if (summary == null) return;
-    
-    final bool isMissing = summary.daySymbol.trim() == '0' || summary.daySymbol.trim().toLowerCase() == 'x';
 
     String v(String? x) => (x == null || x.isEmpty) ? '--' : x;
     final worked = summary.rawWorkedHours == null
         ? '--'
         : summary.rawWorkedHours!.toStringAsFixed(2);
     final breakMinutes = summary.breakMinutesDeducted?.toString() ?? '--';
+    final requestType = _buildRequestTypeLabel(summary);
     final notes = _buildUseCaseNotes(summary);
 
     showDialog<void>(
@@ -651,6 +694,7 @@ class _TimesheetCell extends StatelessWidget {
             Text('Trừ nghỉ giữa ca (phút): $breakMinutes'),
             Text('Đi trễ (phút): ${summary.lateMinutes}'),
             Text('Về sớm (phút): ${summary.earlyLeaveMinutes}'),
+            Text('Loại đơn: $requestType'),
             if (summary.otEligibleMinutes > 0)
               Text('OT đủ điều kiện (phút): ${summary.otEligibleMinutes}'),
             if (summary.otApprovedMinutes > 0)
@@ -669,98 +713,12 @@ class _TimesheetCell extends StatelessWidget {
           ],
         ),
         actions: [
-          if (isMissing)
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showChangeForm(context, summary);
-              },
-              child: const Text('Tạo giải trình', style: TextStyle(color: Colors.red)),
-            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Đóng'),
           ),
         ],
       ),
-    );
-  }
-
-  void _showChangeForm(BuildContext context, DailySummary summary) {
-    TimeOfDay selectedTime = const TimeOfDay(hour: 8, minute: 0);
-    TextEditingController reasonController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateSB) {
-            return BlocConsumer<AttendanceBloc, AttendanceState>(
-              listener: (context, state) {
-                if (state.changeSuccessMessage != null && state.changeSuccessMessage!.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.changeSuccessMessage!), backgroundColor: Colors.green),
-                  );
-                  Navigator.of(context).pop(); // Close dialog
-                  // Refresh timesheet
-                  context.read<AttendanceBloc>().add(const AttendanceRefreshed());
-                } else if (!state.isSubmittingChange && state.error != null && state.error!.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
-                  );
-                }
-              },
-              builder: (context, state) {
-                return AlertDialog(
-                  title: Text('Giải trình công: ${summary.date}'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Giờ bổ sung'),
-                        trailing: Text(selectedTime.format(context), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        onTap: () async {
-                          final time = await showTimePicker(context: context, initialTime: selectedTime);
-                          if (time != null) setStateSB(() => selectedTime = time);
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: reasonController,
-                        maxLines: 3,
-                        decoration: const InputDecoration(
-                          hintText: 'Lý do (VD: Quên quẹt thẻ)',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: state.isSubmittingChange ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Hủy'),
-                    ),
-                    ElevatedButton(
-                      onPressed: state.isSubmittingChange ? null : () {
-                        context.read<AttendanceBloc>().add(AttendanceChangeSubmitted(
-                          date: summary.date,
-                          time: '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00',
-                          reason: reasonController.text,
-                        ));
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C389)),
-                      child: state.isSubmittingChange 
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Gửi duyệt', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
     );
   }
 
@@ -844,6 +802,17 @@ class _TimesheetCell extends StatelessWidget {
     }
 
     return notes;
+  }
+
+  String _buildRequestTypeLabel(DailySummary s) {
+    final symbol = s.daySymbol.trim().toUpperCase();
+    if (symbol == 'C') return 'Công tác (C)';
+    if (symbol == 'P' || symbol == '1L' || symbol == 'X/P') {
+      return 'Nghỉ phép (P)';
+    }
+    final leaveType = (s.leaveType ?? '').trim();
+    if (leaveType.isNotEmpty) return leaveType;
+    return 'Không có';
   }
 
   @override

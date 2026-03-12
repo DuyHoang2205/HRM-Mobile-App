@@ -7,7 +7,6 @@ class FolderSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Demo Clean-up: Only include functional actions to ensure a polished client experience
     final items = <_FolderData>[
       const _FolderData(
         title: 'Chấm công',
@@ -34,7 +33,6 @@ class FolderSection extends StatelessWidget {
         icon: Icons.work_outline_rounded,
         action: FolderAction.businessTrip,
       ),
-      const _FolderData.empty(),
     ];
 
     return Padding(
@@ -63,12 +61,10 @@ class FolderSection extends StatelessWidget {
             ),
             itemBuilder: (context, i) {
               final item = items[i];
-              if (item.isEmpty) return const SizedBox.shrink();
-
               return _FolderTile(
-                title: item.title!,
-                icon: item.icon!,
-                onTap: () => onTap(item.action!),
+                title: item.title,
+                icon: item.icon,
+                onTap: () => onTap(item.action),
               );
             },
           ),
@@ -78,26 +74,18 @@ class FolderSection extends StatelessWidget {
   }
 }
 
-// Keep the enum values so existing logic doesn't break, but we only use 'attendance' for the demo
 enum FolderAction { attendance, salary, overtime, leave, businessTrip }
 
 class _FolderData {
-  final String? title;
-  final IconData? icon;
-  final FolderAction? action;
-  final bool isEmpty;
+  final String title;
+  final IconData icon;
+  final FolderAction action;
 
   const _FolderData({
     required this.title,
     required this.icon,
     required this.action,
-  }) : isEmpty = false;
-
-  const _FolderData.empty()
-    : title = null,
-      icon = null,
-      action = null,
-      isEmpty = true;
+  });
 }
 
 class _FolderTile extends StatelessWidget {

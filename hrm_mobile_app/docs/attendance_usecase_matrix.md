@@ -1,6 +1,6 @@
 # Ma Trận Use Case Chấm Công (ZENSUITE HRM)
 
-Ngày cập nhật: **2026-03-10**
+Ngày cập nhật: **2026-03-12**
 
 ## Phạm vi
 - Mobile: Flutter (`attendance`, `checkin`, `timesheet`)
@@ -45,12 +45,19 @@ SP hiện trả các trường chính sau (Mobile đã parse):
 ### Backend
 - `/Users/baoduy/Documents/work/real_BE/VSCode-darwin-universal.zip/src/module/attendance/sp_Mobile_GetDailyTimesheetSummary.sql`
 - `/Users/baoduy/Documents/work/real_BE/VSCode-darwin-universal.zip/src/module/attendance/attendance.service.ts`
+- `/Users/baoduy/Documents/work/real_BE/VSCode-darwin-universal.zip/src/module/business-trip-mobile/business-trip-mobile.module.ts`
+- `/Users/baoduy/Documents/work/real_BE/VSCode-darwin-universal.zip/src/module/business-trip-mobile/business-trip-mobile.controller.ts`
+- `/Users/baoduy/Documents/work/real_BE/VSCode-darwin-universal.zip/src/module/business-trip-mobile/business-trip-mobile.service.ts`
 
 ### Mobile
 - `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/attendance/models/daily_summary.dart`
 - `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/attendance/bloc/attendance_bloc.dart`
 - `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/attendance/view/timesheet_page.dart`
 - `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/checkin/bloc/checkin_bloc.dart`
+- `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/leave/data/leave_repository.dart`
+- `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/leave/bloc/leave_bloc.dart`
+- `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/leave/view/business_trip_page.dart`
+- `/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/lib/features/home/view/home_page.dart`
 
 ## Ghi chú vận hành
 - Điều kiện duyệt đơn hiện đang dùng `Status = 3` (OT/Leave) theo dữ liệu hệ thống hiện tại.

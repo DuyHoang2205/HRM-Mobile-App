@@ -1,5 +1,6 @@
 class DailySummary {
   final String date; // normalized yyyy-MM-dd
+  final int? shiftID;
   final String? shiftCode;
   final String? shiftTitle;
   final String? shiftFromTime;
@@ -25,6 +26,7 @@ class DailySummary {
 
   DailySummary({
     required this.date,
+    this.shiftID,
     this.shiftCode,
     this.shiftTitle,
     this.shiftFromTime,
@@ -67,9 +69,15 @@ class DailySummary {
 
     return DailySummary(
       date: _normalizeDate(rawDate),
+      shiftID: _toInt(
+        json['shiftID'] ?? json['ShiftID'] ?? json['id'] ?? json['ID'],
+      ),
       shiftCode: (json['shiftCode'] ?? json['ShiftCode'])?.toString(),
       shiftTitle:
-          (json['shiftTitle'] ?? json['ShiftTitle'] ?? json['title'] ?? json['Title'])
+          (json['shiftTitle'] ??
+                  json['ShiftTitle'] ??
+                  json['title'] ??
+                  json['Title'])
               ?.toString(),
       shiftFromTime:
           (json['shiftFromTime'] ??
@@ -85,17 +93,18 @@ class DailySummary {
               ?.toString(),
       firstIn: (json['firstIn'] ?? json['FirstIn'])?.toString(),
       lastOut: (json['lastOut'] ?? json['LastOut'])?.toString(),
-      rawWorkedHours: _toDouble(json['rawWorkedHours'] ?? json['RawWorkedHours']),
+      rawWorkedHours: _toDouble(
+        json['rawWorkedHours'] ?? json['RawWorkedHours'],
+      ),
       requiredHours:
           _toDouble(json['requiredHours'] ?? json['RequiredHours']) ?? 8.0,
       timeCalculate: _toDouble(json['timeCalculate'] ?? json['TimeCalculate']),
-      breakMinutesDeducted:
-          _toInt(
-            json['breakMinutesDeducted'] ??
-                json['breakMinutesDecucted'] ??
-                json['BreakMinutesDeducted'] ??
-                json['BreakMinutesDecucted'],
-          ),
+      breakMinutesDeducted: _toInt(
+        json['breakMinutesDeducted'] ??
+            json['breakMinutesDecucted'] ??
+            json['BreakMinutesDeducted'] ??
+            json['BreakMinutesDecucted'],
+      ),
       lateMinutes: _toInt(json['lateMinutes'] ?? json['LateMinutes']) ?? 0,
       earlyLeaveMinutes:
           _toInt(json['earlyLeaveMinutes'] ?? json['EarlyLeaveMinutes']) ?? 0,
@@ -108,10 +117,10 @@ class DailySummary {
       workFraction: _toDouble(json['workFraction'] ?? json['WorkFraction']),
       leaveFraction: _toDouble(json['leaveFraction'] ?? json['LeaveFraction']),
       leaveType: (json['leaveType'] ?? json['LeaveType'])?.toString(),
-      businessTripCode:
-          (json['businessTripCode'] ?? json['BusinessTripCode'])?.toString(),
-      finalizeStatus:
-          (json['finalizeStatus'] ?? json['FinalizeStatus'])?.toString(),
+      businessTripCode: (json['businessTripCode'] ?? json['BusinessTripCode'])
+          ?.toString(),
+      finalizeStatus: (json['finalizeStatus'] ?? json['FinalizeStatus'])
+          ?.toString(),
       daySymbol: rawSymbol.toString().trim().isEmpty
           ? '0'
           : rawSymbol.toString().trim(),

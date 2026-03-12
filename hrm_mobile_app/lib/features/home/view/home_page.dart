@@ -12,6 +12,7 @@ import '../widgets/folder_section.dart';
 import '../../attendance/view/attendance_page.dart';
 import '../../overtime/view/overtime_list_page.dart';
 import '../../leave/view/leave_list_page.dart';
+import '../../leave/view/business_trip_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -113,6 +114,13 @@ class _HomeView extends StatelessWidget {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
                                       builder: (_) => const LeaveListPage(),
+                                    ),
+                                  );
+                                  break;
+                                case FolderAction.businessTrip:
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const BusinessTripPage(),
                                     ),
                                   );
                                   break;

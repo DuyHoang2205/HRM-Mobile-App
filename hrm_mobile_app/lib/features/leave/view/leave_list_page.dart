@@ -6,20 +6,61 @@ import '../bloc/leave_state.dart';
 import 'leave_registration_page.dart';
 
 class LeaveListPage extends StatelessWidget {
-  const LeaveListPage({super.key});
+  final String pageTitle;
+  final bool onlyBusinessTripByDefault;
+  final bool lockBusinessTripFilter;
+  final String registrationTitle;
+  final String? forcePermissionSymbol;
+
+  const LeaveListPage({
+    super.key,
+    this.pageTitle = 'Nghỉ phép',
+    this.onlyBusinessTripByDefault = false,
+    this.lockBusinessTripFilter = false,
+    this.registrationTitle = 'Đăng ký nghỉ',
+    this.forcePermissionSymbol,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isBusinessTripMode =
+        forcePermissionSymbol?.trim().toUpperCase() == 'C' ||
+        onlyBusinessTripByDefault;
     return BlocProvider(
-      create: (_) => LeaveBloc()..add(const LeaveStarted()),
-      child: const _LeaveListView(),
+      create: (_) =>
+          LeaveBloc(businessTripMode: isBusinessTripMode)
+            ..add(const LeaveStarted()),
+      child: _LeaveListView(
+        pageTitle: pageTitle,
+        onlyBusinessTripByDefault: onlyBusinessTripByDefault,
+        lockBusinessTripFilter: lockBusinessTripFilter,
+        registrationTitle: registrationTitle,
+        forcePermissionSymbol: forcePermissionSymbol,
+      ),
     );
   }
 }
 
-class _LeaveListView extends StatelessWidget {
-  const _LeaveListView();
+class _LeaveListView extends StatefulWidget {
+  final String pageTitle;
+  final bool onlyBusinessTripByDefault;
+  final bool lockBusinessTripFilter;
+  final String registrationTitle;
+  final String? forcePermissionSymbol;
 
+  const _LeaveListView({
+    required this.pageTitle,
+    required this.onlyBusinessTripByDefault,
+    required this.lockBusinessTripFilter,
+    required this.registrationTitle,
+    required this.forcePermissionSymbol,
+  });
+
+  @override
+  State<_LeaveListView> createState() => _LeaveListViewState();
+}
+
+class _LeaveListViewState extends State<_LeaveListView> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -27,15 +68,17 @@ class _LeaveListView extends StatelessWidget {
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F7FB),
         appBar: AppBar(
-          title: const Text(
-            'Nghỉ phép',
-            style: TextStyle(
-              color: Color(0xFF0B1B2B),
-              fontWeight: FontWeight.bold,
-            ),
+          titleTextStyle: const TextStyle(
+            color: Color(0xFF0B1B2B),
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
+          titleSpacing: 0,
+          toolbarHeight: 56,
+          centerTitle: false,
           backgroundColor: Colors.white,
           elevation: 0,
+          title: Text(widget.pageTitle),
           leading: IconButton(
             icon: const Icon(
               Icons.arrow_back_ios_new_rounded,
@@ -49,7 +92,10 @@ class _LeaveListView extends StatelessWidget {
               onPressed: () async {
                 final result = await Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const LeaveRegistrationPage(),
+                    builder: (_) => LeaveRegistrationPage(
+                      pageTitle: widget.registrationTitle,
+                      forcePermissionSymbol: widget.forcePermissionSymbol,
+                    ),
                   ),
                 );
                 if (result == true) {
@@ -88,20 +134,26 @@ class _LeaveListView extends StatelessWidget {
             ),
           ),
         ),
-        body: BlocBuilder<LeaveBloc, LeaveState>(
-          builder: (context, state) {
-            if (state.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        body: Column(
+          children: [
+            Expanded(
+              child: BlocBuilder<LeaveBloc, LeaveState>(
+                builder: (context, state) {
+                  if (state.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-            return TabBarView(
-              children: [
-                _buildList(context, state, 0), // Tất cả
-                _buildList(context, state, 1), // Chờ duyệt
-                _buildList(context, state, 2), // Lịch sử
-              ],
-            );
-          },
+                  return TabBarView(
+                    children: [
+                      _buildList(context, state, 0), // Tất cả
+                      _buildList(context, state, 1), // Chờ duyệt
+                      _buildList(context, state, 2), // Lịch sử
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );

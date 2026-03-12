@@ -7,12 +7,14 @@ class PermissionTypeItem {
   final String permissionType;
   final String code;
   final String siteID;
+  final String symbol;
 
   const PermissionTypeItem({
     required this.id,
     required this.permissionType,
     required this.code,
     required this.siteID,
+    required this.symbol,
   });
 
   factory PermissionTypeItem.fromJson(Map<String, dynamic> json) {
@@ -21,6 +23,7 @@ class PermissionTypeItem {
       permissionType: json['PermissionType']?.toString() ?? '',
       code: json['Code']?.toString() ?? '',
       siteID: json['SiteID']?.toString() ?? '',
+      symbol: json['Symbol']?.toString() ?? '',
     );
   }
 }

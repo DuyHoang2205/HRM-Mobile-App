@@ -101,3 +101,42 @@ Khi UAT (Demo/Test), BA cần lần lượt xác nhận cùng Khách hàng và t
 - [ ] **2. Thấu đáo - Số Liệu:** Popup khi chạm vào mỗi ngày chứa đầy đủ 100% các dữ liệu tinh tế nhất mà một kế toán nhân sự cần (Giờ In/Out, Tính trễ/sớm/OT/Trừ nghỉ).
 - [ ] **3. Thông thái - "Giải Thích Tự Động":** App có cơ chế AI bằng Rule cực kỳ thông minh. Thấy nhân sự sai ở đâu, có đơn phép chỗ nào là tự động "in ra câu giải thích bằng tiếng việt có dấu" để nhân sự đỡ phải cãi nhau với HR.
 - [ ] **4. Bảo Mật - Cấu trúc chống Hack:** Khách hàng hiểu rõ cơ chế: Mobile App không tính công ảo trên điện thoại. Nó hiển thị trung thực dữ liệu đã qua nhào nặn bảo vệ 2 lớp chuẩn mực từ Máy chủ Server, chống vạn khả năng nhân sự gian lận qua ứng dụng.
+
+---
+
+## 🔧 5. Checklist Backend Riêng Cho Nghiệp Vụ Công Tác (C)
+
+Đây là checklist kỹ thuật bắt buộc để tránh nhầm giữa **Nghỉ phép (P)** và **Công tác (C)**:
+
+1. Bảng `PermissionType` phải có ít nhất 1 loại đơn có `Symbol = 'C'` theo đúng `SiteID`.
+2. Các dòng đơn công tác trong `OnLeaveFileLine` phải có `PermissionType` trỏ đúng vào loại có `Symbol='C'` (không để `NULL`).
+3. Đơn phải ở trạng thái duyệt `Status = 3`.
+4. API tổng hợp công (`attendance/summary/:siteID`) phải trả `daySymbol='C'` cho ngày công tác, hoặc Mobile overlay đúng thành `C` dựa trên `PermissionType.Symbol`.
+
+SQL kiểm tra nhanh:
+
+```sql
+-- A) Master loại đơn công tác
+SELECT ID, Code, PermissionType, Symbol, SiteID
+FROM dbo.PermissionType
+WHERE UPPER(LTRIM(RTRIM(Symbol))) = 'C'
+  AND (SiteID = 'REEME' OR SiteID IS NULL OR SiteID = '');
+
+-- B) Đơn công tác đã duyệt của nhân viên
+SELECT
+  l.ID, l.EmployeeID, l.PermissionType, l.FromDate, l.ToDate,
+  l.Qty, l.Status, l.Description, l.SiteID, p.Symbol
+FROM dbo.OnLeaveFileLine l
+LEFT JOIN dbo.PermissionType p ON p.ID = l.PermissionType
+WHERE l.EmployeeID = 3195
+  AND l.Status = 3
+  AND UPPER(LTRIM(RTRIM(ISNULL(p.Symbol, '')))) = 'C'
+ORDER BY l.FromDate DESC;
+
+-- C) Verify bảng công theo API summary
+EXEC dbo.sp_GetDailyTimesheetSummary
+  @employeeID = 3195,
+  @fromDate = '2026-02-01',
+  @toDate   = '2026-02-28',
+  @siteID   = 'REEME';
+```

@@ -93,9 +93,41 @@ class LeaveRepository {
         '[LeaveRepository] GET /onLeaveFileLine/$employeeID/$year/$siteID',
       );
       final response = await _client.dio.get(
-        '/onLeaveFileLine/$employeeID/$year/$siteID',
+        'onLeaveFileLine/$employeeID/$year/$siteID',
       );
 
+      if (response.statusCode == 200) {
+        final List<dynamic> raw = response.data as List? ?? [];
+        debugPrint('[LeaveRepo] Fetched ${raw.length} leaves');
+        return raw
+            .cast<Map<String, dynamic>>()
+            .map(LeaveRequest.fromJson)
+            .toList();
+      }
+      debugPrint('[LeaveRepo] Failed status: ${response.statusCode}');
+      return [];
+    } on DioException catch (e) {
+      final message =
+          _extractMessage(e.response?.data) ?? 'Lỗi khi tải danh sách';
+      throw Exception(message);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // CÔNG TÁC (MOBILE-FIRST)
+  // ---------------------------------------------------------------------------
+  Future<List<LeaveRequest>> getBusinessTripRequests({
+    required int employeeID,
+    required int year,
+    required String siteID,
+  }) async {
+    try {
+      debugPrint(
+        '[LeaveRepository] GET /businessTripMobile/$employeeID/$year/$siteID',
+      );
+      final response = await _client.dio.get(
+        '/businessTripMobile/$employeeID/$year/$siteID',
+      );
       if (response.statusCode == 200) {
         final List<dynamic> raw = response.data as List? ?? [];
         return raw
@@ -105,9 +137,38 @@ class LeaveRepository {
       }
       return [];
     } on DioException catch (e) {
-      final message =
-          _extractMessage(e.response?.data) ?? 'Lỗi khi tải danh sách';
-      throw Exception(message);
+      // Fallback an toàn: backend cũ chưa có route mới.
+      debugPrint(
+        '[LeaveRepository] businessTripMobile unavailable, fallback onLeaveFileLine: ${e.message}',
+      );
+      final all = await getLeaveRequests(
+        employeeID: employeeID,
+        year: year,
+        siteID: siteID,
+      );
+      final permissionTypes = await getPermissionTypes(siteID);
+      final cTypeIds = permissionTypes
+          .where((t) => t.symbol.trim().toUpperCase() == 'C')
+          .map((t) => t.id)
+          .toSet();
+      return all.where((r) => cTypeIds.contains(r.permissionType)).toList();
+    }
+  }
+
+  Future<bool> submitBusinessTripRequest(Map<String, dynamic> body) async {
+    try {
+      debugPrint('[LeaveRepository] POST /businessTripMobile body: $body');
+      final response = await _client.dio.post(
+        '/businessTripMobile',
+        data: body,
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } on DioException catch (e) {
+      // Fallback an toàn: backend cũ chưa có route mới.
+      debugPrint(
+        '[LeaveRepository] businessTripMobile unavailable, fallback onLeaveFileLine: ${e.message}',
+      );
+      return submitLeaveRequest(body);
     }
   }
 
