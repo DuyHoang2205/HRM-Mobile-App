@@ -24,6 +24,16 @@ class AttendanceFilterChanged extends AttendanceEvent {
   List<Object?> get props => [start, end];
 }
 
+class AttendanceTimesheetDateChanged extends AttendanceEvent {
+  final DateTime start;
+  final DateTime end;
+
+  const AttendanceTimesheetDateChanged({required this.start, required this.end});
+
+  @override
+  List<Object?> get props => [start, end];
+}
+
 class AttendanceCheckResultArrived extends AttendanceEvent {
   final bool isCheckIn;
   final DateTime timestamp;

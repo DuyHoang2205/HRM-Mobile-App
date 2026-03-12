@@ -30,6 +30,7 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
 
   DateTime? _startDate;
   DateTime? _endDate;
+  String _halfDayOption = 'ALL'; // 'ALL', 'MORNING', 'AFTERNOON'
 
   // permissionType là số nguyên (ID), được load từ state.permissionTypes (API)
   int? _selectedPermissionTypeId;
@@ -149,6 +150,48 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
                 ),
 
                 const SizedBox(height: 16),
+
+                if (_isSameDay(_startDate, _endDate)) ...[
+                  _buildLabel('Thời gian nghỉ'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    dropdownColor: Colors.white,
+                    value: _halfDayOption,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'ALL',
+                        child: Text('Cả ngày (1.0 ngày)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'MORNING',
+                        child: Text('Buổi sáng (0.5 ngày)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'AFTERNOON',
+                        child: Text('Buổi chiều (0.5 ngày)'),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setState(() => _halfDayOption = v);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 _buildLabel('Lý do / Loại phép', required: true),
                 const SizedBox(height: 8),
                 // Dropdown load từ state.permissionTypes (API thật, không hardcode)
@@ -391,6 +434,11 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
     return '${two(d.day)}/${two(d.month)}/${d.year}';
   }
 
+  bool _isSameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
   // Future<String> _fmtDateImageStyle(DateTime? d) async {
   //   // If we want "5 Feb 2026", we need DateFormat.
   //   // Keeping it simple.
@@ -449,6 +497,11 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
         } else {
           _endDate = picked;
         }
+
+        // Reset halfDayOption nếu chọn nhiều ngày
+        if (!_isSameDay(_startDate, _endDate)) {
+          _halfDayOption = 'ALL';
+        }
       });
     }
   }
@@ -486,7 +539,12 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
       }
 
       // Tính số ngày nghỉ (qty)
-      final diffDays = _endDate!.difference(_startDate!).inDays + 1;
+      double qty = _endDate!.difference(_startDate!).inDays + 1.0;
+      if (_isSameDay(_startDate, _endDate)) {
+        if (_halfDayOption == 'MORNING' || _halfDayOption == 'AFTERNOON') {
+          qty = 0.5;
+        }
+      }
 
       final req = LeaveRequest(
         // id không gửi khi tạo mới — backend tự sinh (PrimaryGeneratedColumn)
@@ -498,7 +556,7 @@ class _LeaveRegistrationViewState extends State<_LeaveRegistrationView> {
         expired: _endDate!.add(
           const Duration(days: 30),
         ), // Convention: hết hạn sau 30 ngày
-        qty: diffDays.toDouble(),
+        qty: qty,
         year: _startDate!.year,
         description: _descCtrl.text.trim(),
         createBy: staffCode, // dùng staffCode theo convention của backend

@@ -21,7 +21,46 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     on<AttendanceStarted>(_onLoad);
     on<AttendanceRefreshed>(_onLoad);
     on<AttendanceFilterChanged>(_onFilterChanged);
+    on<AttendanceTimesheetDateChanged>(_onTimesheetDateChanged);
     on<AttendanceCheckResultArrived>(_onLoad);
+  }
+
+  Future<void> _onTimesheetDateChanged(
+    AttendanceTimesheetDateChanged event,
+    Emitter<AttendanceState> emit,
+  ) async {
+    try {
+      final employeeId = await AuthHelper.getEmployeeId();
+      final siteID = await AuthHelper.getSiteId();
+
+      String fmt(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+
+      final summaryResponse = await _fetchDailySummary(
+        siteID: siteID,
+        employeeId: employeeId,
+        fromDate: fmt(event.start),
+        toDate: fmt(event.end),
+        month: event.start.month,
+        year: event.start.year,
+      );
+
+      final raw = summaryResponse.data;
+      final List<dynamic> list = raw is List
+          ? raw
+          : (raw is Map && raw['data'] is List)
+          ? (raw['data'] as List)
+          : const [];
+
+      final newMap = Map<String, DailySummary>.from(state.dailySummaries);
+      for (var item in list) {
+        if (item is! Map) continue;
+        final summary = DailySummary.fromJson(Map<String, dynamic>.from(item));
+        if (summary.date.isEmpty) continue;
+        newMap[summary.date] = summary;
+      }
+
+      emit(state.copyWith(dailySummaries: newMap));
+    } catch (_) {}
   }
 
   Future<void> _onFilterChanged(

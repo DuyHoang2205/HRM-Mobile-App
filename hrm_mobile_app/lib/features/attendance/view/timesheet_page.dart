@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/attendance_bloc.dart';
+import '../bloc/attendance_event.dart';
 import '../bloc/attendance_state.dart';
 import '../models/daily_summary.dart';
 
@@ -105,22 +106,20 @@ class _TimesheetPageState extends State<TimesheetPage>
             ),
             const SizedBox(height: 12),
             _buildLegendItem(
-              'x',
-              'Lỗi công (thiếu Check-in hoặc Check-out)',
-              const Color(0xFFECAE41),
+              '0',
+              'Lỗi công (thiếu In/Out) / Không phát sinh công',
+              const Color(0xFFECAE41), 
             ),
             const SizedBox(height: 12),
             _buildLegendItem(
               'x/P',
               'Nửa ngày công + nửa ngày phép',
-              const Color(0xFFECAE41),
+              const Color(0xFFECAE41), 
             ),
             const SizedBox(height: 12),
             _buildLegendItem('P', 'Nghỉ phép', const Color(0xFFD63F3A)),
             const SizedBox(height: 12),
             _buildLegendItem('C', 'Công tác', const Color(0xFF4F8DFD)),
-            const SizedBox(height: 12),
-            _buildLegendItem('0', 'Nghỉ/không phát sinh công', Colors.black54),
           ],
         ),
         actions: [
@@ -166,24 +165,79 @@ class _TimesheetPageState extends State<TimesheetPage>
   }
 }
 
-class _MonthlyTimesheetTab extends StatelessWidget {
+class _MonthlyTimesheetTab extends StatefulWidget {
   const _MonthlyTimesheetTab();
+
+  @override
+  State<_MonthlyTimesheetTab> createState() => _MonthlyTimesheetTabState();
+}
+
+class _MonthlyTimesheetTabState extends State<_MonthlyTimesheetTab> {
+  late DateTime _currentMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _currentMonth = DateTime(now.year, now.month, 1);
+    // Request initial data
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchMonth());
+  }
+
+  void _fetchMonth() {
+    final end = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
+    context.read<AttendanceBloc>().add(
+      AttendanceTimesheetDateChanged(start: _currentMonth, end: end),
+    );
+  }
+
+  void _prevMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+    });
+    _fetchMonth();
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+    });
+    _fetchMonth();
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
-        if (state.isLoading && state.logs.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
         final cellDataList = _buildCalendar(
-          state.filterDate,
+          _currentMonth,
           state.dailySummaries,
         );
 
         return Column(
           children: [
+            // Month Header
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              color: Colors.white,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, color: Color(0xFF0B1B2B)),
+                    onPressed: _prevMonth,
+                  ),
+                  Text(
+                    'Tháng ${_currentMonth.month.toString().padLeft(2, '0')}/${_currentMonth.year}',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF00C389)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, color: Color(0xFF0B1B2B)),
+                    onPressed: _nextMonth,
+                  ),
+                ],
+              ),
+            ),
             // Days of week header
             Container(
               color: const Color(
@@ -265,6 +319,7 @@ class _MonthlyTimesheetTab extends StatelessWidget {
             status = _DayStatus.normal;
           } else if (summary.daySymbol.contains('x')) {
             status = _DayStatus.missing;
+            displaySymbol = (summary.daySymbol == 'x') ? '0' : summary.daySymbol;
           } else {
             status = _DayStatus.leave;
           }
@@ -297,24 +352,85 @@ class _MonthlyTimesheetTab extends StatelessWidget {
   }
 }
 
-class _WeeklyTimesheetTab extends StatelessWidget {
+class _WeeklyTimesheetTab extends StatefulWidget {
   const _WeeklyTimesheetTab();
+
+  @override
+  State<_WeeklyTimesheetTab> createState() => _WeeklyTimesheetTabState();
+}
+
+class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
+  late DateTime _currentWeekStart;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    final offset = now.weekday - 1;
+    _currentWeekStart = DateTime(now.year, now.month, now.day).subtract(Duration(days: offset));
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchWeek());
+  }
+
+  void _fetchWeek() {
+    final end = _currentWeekStart.add(const Duration(days: 6));
+    context.read<AttendanceBloc>().add(
+      AttendanceTimesheetDateChanged(start: _currentWeekStart, end: end),
+    );
+  }
+
+  void _prevWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
+    });
+    _fetchWeek();
+  }
+
+  void _nextWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
+    });
+    _fetchWeek();
+  }
+
+  String _weekLabel() {
+    final end = _currentWeekStart.add(const Duration(days: 6));
+    String f(DateTime d) => '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+    return '${f(_currentWeekStart)} - ${f(end)}';
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AttendanceBloc, AttendanceState>(
       builder: (context, state) {
-        if (state.isLoading && state.logs.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
         final cellDataList = _buildWeekly(
-          state.filterDate,
+          _currentWeekStart,
           state.dailySummaries,
         );
 
         return Column(
           children: [
+            // Week Header
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+              color: Colors.white,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left, color: Color(0xFF0B1B2B)),
+                    onPressed: _prevWeek,
+                  ),
+                  Text(
+                    _weekLabel(),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00C389)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right, color: Color(0xFF0B1B2B)),
+                    onPressed: _nextWeek,
+                  ),
+                ],
+              ),
+            ),
             // Days of week header
             Container(
               color: const Color(0xFFF5F6FA), // Light grey background
@@ -355,13 +471,11 @@ class _WeeklyTimesheetTab extends StatelessWidget {
   }
 
   List<_TimesheetCellData> _buildWeekly(
-    DateTime monthDate,
+    DateTime startOfWeek,
     Map<String, DailySummary> dailySummaries,
   ) {
     final now = DateTime.now();
     final todayDate = DateTime(now.year, now.month, now.day);
-    final offset = todayDate.weekday - 1;
-    final startOfWeek = todayDate.subtract(Duration(days: offset));
     final todayStr =
         "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
@@ -395,13 +509,14 @@ class _WeeklyTimesheetTab extends StatelessWidget {
             status = _DayStatus.normal;
           } else if (summary.daySymbol.contains('x')) {
             status = _DayStatus.missing;
+            displaySymbol = '0'; // Hiển thị đè 0 thay vì x
           } else {
             status = _DayStatus.leave;
           }
         } else if (current.compareTo(todayDate) <= 0) {
           if (!isSunday && !isSaturday) {
             status = _DayStatus.missing;
-            displaySymbol = 'x';
+            displaySymbol = '0'; // Hiển thị đè 0 thay vì x
           }
         }
       }
@@ -643,7 +758,11 @@ class _TimesheetCell extends StatelessWidget {
         statusColor = const Color(0xFF2CAD61); // Green
         break;
       case _DayStatus.missing:
-        if (statusText.isEmpty) statusText = 'x';
+        if (statusText.isEmpty || statusText == 'x') {
+          statusText = '0';
+        } else if (statusText == 'x/P') {
+          // keep 'x/P' as is
+        }
         statusColor = const Color(0xFFECAE41); // Yellow/Orange
         break;
       case _DayStatus.leave:

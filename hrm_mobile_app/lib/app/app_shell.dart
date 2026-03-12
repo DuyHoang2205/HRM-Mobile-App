@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hrm_mobile_app/features/home/view/home_page.dart';
 import '../../../core/widgets/placeholder_page.dart';
-import '../../features/leave/view/leave_list_page.dart';
+import '../../features/leave/view/leave_registration_page.dart';
 import '../../features/overtime/view/overtime_list_page.dart';
 
 class AppShell extends StatefulWidget {
@@ -262,7 +262,7 @@ class _PlusMenuOverlay extends StatelessWidget {
                         label: 'Đăng ký nghỉ phép',
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const LeaveListPage(),
+                            builder: (_) => const LeaveRegistrationPage(),
                           ),
                         ),
                       ),
