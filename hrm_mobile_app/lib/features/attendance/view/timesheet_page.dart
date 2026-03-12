@@ -285,6 +285,7 @@ class _MonthlyTimesheetTabState extends State<_MonthlyTimesheetTab> {
 
     final startDate = firstDayOfMonth.subtract(Duration(days: offset));
     final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
     final todayStr =
         "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     // todayDate used for isToday cell highlight only
@@ -323,9 +324,21 @@ class _MonthlyTimesheetTabState extends State<_MonthlyTimesheetTab> {
           } else {
             status = _DayStatus.leave;
           }
+        } else if (current.compareTo(todayDate) <= 0) {
+          if (!isSunday && !isSaturday) {
+            status = _DayStatus.missing;
+            displaySymbol = '0';
+            summary = DailySummary(
+              date: key,
+              daySymbol: '0',
+              requiredHours: 8.0,
+              lateMinutes: 0,
+              earlyLeaveMinutes: 0,
+            );
+          } else {
+            status = _DayStatus.none;
+          }
         } else {
-          // Ngày trong tháng nhưng không có data từ API → để trống, không tự gán 'x'
-          // (tránh false positive khi API chưa load xong hoặc ngày chưa có log)
           status = _DayStatus.none;
         }
       }
@@ -516,7 +529,14 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
         } else if (current.compareTo(todayDate) <= 0) {
           if (!isSunday && !isSaturday) {
             status = _DayStatus.missing;
-            displaySymbol = '0'; // Hiển thị đè 0 thay vì x
+            displaySymbol = '0';
+            summary = DailySummary(
+              date: key,
+              daySymbol: '0',
+              requiredHours: 8.0,
+              lateMinutes: 0,
+              earlyLeaveMinutes: 0,
+            );
           }
         }
       }
