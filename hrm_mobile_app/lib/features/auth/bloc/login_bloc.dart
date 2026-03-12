@@ -23,7 +23,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       final loginResponse = await _authRepository.login(
         username: event.username,
         password: event.password,
-        siteId: 'REEME',
+        // Temporary default for VietGoat; later this should come from a site selector or config.
+        siteId: 'KIA',
       );
 
       // Save token and decode employeeId/site from JWT for attendance APIs

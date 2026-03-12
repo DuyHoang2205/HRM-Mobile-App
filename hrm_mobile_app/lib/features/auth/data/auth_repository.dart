@@ -14,15 +14,21 @@ class AuthRepository {
   }) async {
     try {
       final response = await _client.dio.post(
-        'UserV2/login',
+        'userv2/login',
         data: {'username': username, 'password': password, 'siteId': siteId},
       );
 
       _debug('[AuthRepository] Login status: ${response.statusCode}');
+      _debug('[AuthRepository] Login raw response: ${response.data}');
+
+      if (response.statusCode == 405) {
+        await _probeLegacyLogin(username: username, password: password);
+      }
 
       final data = response.data;
       if (data is! Map<String, dynamic>) {
         _debug('[AuthRepository] Invalid response type: ${data.runtimeType}');
+        await _probeLegacyLogin(username: username, password: password);
         throw const FormatException('Invalid login response format');
       }
       final loginResponse = LoginResponse.fromJson(data);
@@ -36,10 +42,35 @@ class AuthRepository {
       }
       return loginResponse;
     } on DioException catch (e) {
+      if (e.response?.statusCode == 405) {
+        await _probeLegacyLogin(username: username, password: password);
+      }
       _debug(
         '[AuthRepository] Login failed: type=${e.type} status=${e.response?.statusCode} message=${e.message}',
       );
       rethrow;
+    } on FormatException {
+      rethrow;
+    }
+  }
+
+  Future<void> _probeLegacyLogin({
+    required String username,
+    required String password,
+  }) async {
+    try {
+      final response = await _client.dio.get('users/check/$username/$password');
+      _debug('[AuthRepository] Legacy login status: ${response.statusCode}');
+      _debug(
+        '[AuthRepository] Legacy login response type: ${response.data.runtimeType}',
+      );
+      _debug('[AuthRepository] Legacy login response: ${response.data}');
+    } on DioException catch (e) {
+      _debug(
+        '[AuthRepository] Legacy login probe failed: status=${e.response?.statusCode} message=${e.message}',
+      );
+    } catch (e) {
+      _debug('[AuthRepository] Legacy login probe exception: $e');
     }
   }
 
