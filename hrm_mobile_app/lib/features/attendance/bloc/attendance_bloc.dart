@@ -24,6 +24,50 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     on<AttendanceFilterChanged>(_onFilterChanged);
     on<AttendanceTimesheetDateChanged>(_onTimesheetDateChanged);
     on<AttendanceCheckResultArrived>(_onLoad);
+    on<AttendanceChangeSubmitted>(_onSubmitChange);
+  }
+
+  Future<void> _onSubmitChange(
+    AttendanceChangeSubmitted event,
+    Emitter<AttendanceState> emit,
+  ) async {
+    emit(state.copyWith(isSubmittingChange: true, error: '', changeSuccessMessage: ''));
+    try {
+      final employeeId = await AuthHelper.getEmployeeId();
+      final siteID = await AuthHelper.getSiteId();
+      final createdBy = await AuthHelper.getStaffCode() ?? 'admin';
+
+      final String timeString = "${event.date}T${event.time}";
+
+      final body = {
+        "employeeID": employeeId,
+        "authDate": event.date,
+        "authTime": timeString,
+        "createdBy": createdBy,
+        "siteID": siteID,
+        "reason": event.reason, // BE might not use it directly in DTO, but can save to log
+      };
+
+      final response = await _dioClient.dio.post('attendance/change/$siteID', data: body);
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        emit(state.copyWith(
+          isSubmittingChange: false,
+          changeSuccessMessage: 'Đã gửi giải trình thành công',
+        ));
+      } else {
+        emit(state.copyWith(
+          isSubmittingChange: false,
+          error: 'Gửi thất bại, vui lòng thử lại',
+        ));
+      }
+    } catch (e) {
+      _debug("Submit change error: $e");
+      emit(state.copyWith(
+        isSubmittingChange: false,
+        error: 'Lỗi khi gửi giải trình: $e',
+      ));
+    }
   }
 
   Future<void> _onTimesheetDateChanged(

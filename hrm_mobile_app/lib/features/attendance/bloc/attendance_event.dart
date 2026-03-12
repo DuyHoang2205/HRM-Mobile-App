@@ -46,3 +46,18 @@ class AttendanceCheckResultArrived extends AttendanceEvent {
   @override
   List<Object?> get props => [isCheckIn, timestamp];
 }
+
+class AttendanceChangeSubmitted extends AttendanceEvent {
+  final String date;  // YYYY-MM-DD
+  final String time;  // HH:MM:SS
+  final String reason;
+
+  const AttendanceChangeSubmitted({
+    required this.date,
+    required this.time,
+    required this.reason,
+  });
+
+  @override
+  List<Object?> get props => [date, time, reason];
+}

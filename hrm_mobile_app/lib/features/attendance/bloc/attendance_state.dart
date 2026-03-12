@@ -11,6 +11,8 @@ class AttendanceState extends Equatable {
   final DateTime? endDate;
   final Map<String, AttendancePolicyConfig> dayPolicies;
   final Map<String, DailySummary> dailySummaries;
+  final bool isSubmittingChange;
+  final String? changeSuccessMessage;
 
   const AttendanceState({
     required this.logs,
@@ -20,6 +22,8 @@ class AttendanceState extends Equatable {
     this.endDate,
     this.dayPolicies = const {},
     this.dailySummaries = const {},
+    this.isSubmittingChange = false,
+    this.changeSuccessMessage,
   });
 
   factory AttendanceState.initial() {
@@ -45,15 +49,19 @@ class AttendanceState extends Equatable {
     DateTime? endDate,
     Map<String, AttendancePolicyConfig>? dayPolicies,
     Map<String, DailySummary>? dailySummaries,
+    bool? isSubmittingChange,
+    String? changeSuccessMessage,
   }) {
     return AttendanceState(
       logs: logs ?? this.logs,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
+      error: error != null ? (error.isEmpty ? null : error) : this.error,
       filterDate: filterDate ?? this.filterDate,
       endDate: endDate ?? this.endDate,
       dayPolicies: dayPolicies ?? this.dayPolicies,
       dailySummaries: dailySummaries ?? this.dailySummaries,
+      isSubmittingChange: isSubmittingChange ?? this.isSubmittingChange,
+      changeSuccessMessage: changeSuccessMessage != null ? (changeSuccessMessage.isEmpty ? null : changeSuccessMessage) : this.changeSuccessMessage,
     );
   }
 
@@ -66,5 +74,7 @@ class AttendanceState extends Equatable {
     endDate,
     dayPolicies,
     dailySummaries,
+    isSubmittingChange,
+    changeSuccessMessage,
   ];
 }

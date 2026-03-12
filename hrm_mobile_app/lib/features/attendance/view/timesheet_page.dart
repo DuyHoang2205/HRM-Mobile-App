@@ -604,6 +604,8 @@ class _TimesheetCell extends StatelessWidget {
   void _showDetail(BuildContext context) {
     final summary = data.summary;
     if (summary == null) return;
+    
+    final bool isMissing = summary.daySymbol.trim() == '0' || summary.daySymbol.trim().toLowerCase() == 'x';
 
     String v(String? x) => (x == null || x.isEmpty) ? '--' : x;
     final worked = summary.rawWorkedHours == null
@@ -647,12 +649,98 @@ class _TimesheetCell extends StatelessWidget {
           ],
         ),
         actions: [
+          if (isMissing)
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showChangeForm(context, summary);
+              },
+              child: const Text('Tạo giải trình', style: TextStyle(color: Colors.red)),
+            ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Đóng'),
           ),
         ],
       ),
+    );
+  }
+
+  void _showChangeForm(BuildContext context, DailySummary summary) {
+    TimeOfDay selectedTime = const TimeOfDay(hour: 8, minute: 0);
+    TextEditingController reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateSB) {
+            return BlocConsumer<AttendanceBloc, AttendanceState>(
+              listener: (context, state) {
+                if (state.changeSuccessMessage != null && state.changeSuccessMessage!.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.changeSuccessMessage!), backgroundColor: Colors.green),
+                  );
+                  Navigator.of(context).pop(); // Close dialog
+                  // Refresh timesheet
+                  context.read<AttendanceBloc>().add(const AttendanceRefreshed());
+                } else if (!state.isSubmittingChange && state.error != null && state.error!.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
+                  );
+                }
+              },
+              builder: (context, state) {
+                return AlertDialog(
+                  title: Text('Giải trình công: ${summary.date}'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Giờ bổ sung'),
+                        trailing: Text(selectedTime.format(context), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        onTap: () async {
+                          final time = await showTimePicker(context: context, initialTime: selectedTime);
+                          if (time != null) setStateSB(() => selectedTime = time);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: reasonController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          hintText: 'Lý do (VD: Quên quẹt thẻ)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: state.isSubmittingChange ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Hủy'),
+                    ),
+                    ElevatedButton(
+                      onPressed: state.isSubmittingChange ? null : () {
+                        context.read<AttendanceBloc>().add(AttendanceChangeSubmitted(
+                          date: summary.date,
+                          time: '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00',
+                          reason: reasonController.text,
+                        ));
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C389)),
+                      child: state.isSubmittingChange 
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Gửi duyệt', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
