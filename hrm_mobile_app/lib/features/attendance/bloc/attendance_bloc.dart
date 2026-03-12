@@ -11,6 +11,7 @@ import '../../../core/utils/attendance_action_resolver.dart';
 import '../../../core/utils/attendance_day_policy.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/auth/auth_helper.dart';
+import '../../leave/data/leave_repository.dart';
 
 class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   static const int _shiftServerHourCompensation =
@@ -58,6 +59,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         if (summary.date.isEmpty) continue;
         newMap[summary.date] = summary;
       }
+
+      await _overlayLeaves(newMap, employeeId ?? 0, event.start.year, siteID);
 
       emit(state.copyWith(dailySummaries: newMap));
     } catch (_) {}
@@ -135,6 +138,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           );
         }
         _debug('[DailySummary] total keys = ${summariesMap.keys.length}');
+
+        await _overlayLeaves(summariesMap, employeeId ?? 0, start.year, siteID);
       } catch (e, st) {
         _debug('Failed to fetch daily summaries: $e\n$st');
       }
@@ -395,5 +400,45 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   void _debug(String message) {
     if (!kDebugMode) return;
     debugPrint(message);
+  }
+
+  Future<void> _overlayLeaves(
+    Map<String, DailySummary> map,
+    int employeeId,
+    int year,
+    String siteID,
+  ) async {
+    try {
+      final leaveRepo = LeaveRepository();
+      final leaves = await leaveRepo.getLeaveRequests(
+        employeeID: employeeId,
+        year: year,
+        siteID: siteID,
+      );
+      
+      final approvedLeaves = leaves.where((l) => l.status == 3).toList();
+      for (var leave in approvedLeaves) {
+        DateTime current = DateTime(leave.fromDate.year, leave.fromDate.month, leave.fromDate.day);
+        final end = DateTime(leave.toDate.year, leave.toDate.month, leave.toDate.day);
+        
+        while (current.compareTo(end) <= 0) {
+          final dateStr = "${current.year}-${current.month.toString().padLeft(2, '0')}-${current.day.toString().padLeft(2, '0')}";
+          
+          if (!map.containsKey(dateStr) || map[dateStr]!.daySymbol == '0') {
+            map[dateStr] = DailySummary(
+              date: dateStr,
+              daySymbol: 'P',
+              requiredHours: 8.0,
+              lateMinutes: 0,
+              earlyLeaveMinutes: 0,
+              leaveType: 'Đã duyệt',
+            );
+          }
+          current = current.add(const Duration(days: 1));
+        }
+      }
+    } catch (e) {
+      _debug('Overlay leave error: $e');
+    }
   }
 }
