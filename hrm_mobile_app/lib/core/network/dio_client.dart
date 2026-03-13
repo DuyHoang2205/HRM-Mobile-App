@@ -9,9 +9,10 @@ class DioClient {
   late final Dio dio;
 
   DioClient() {
+    final normalizedBaseUrl = _normalizeBaseUrl(AppConfig.apiBaseUrl);
     dio = Dio(
       BaseOptions(
-        baseUrl: AppConfig.apiBaseUrl,
+        baseUrl: normalizedBaseUrl,
 
         validateStatus: (status) {
           if (status == null) return false;
@@ -107,6 +108,11 @@ class DioClient {
         },
       ),
     );
+  }
+
+  String _normalizeBaseUrl(String raw) {
+    final trimmed = raw.trim().replaceAll(RegExp(r'/+$'), '');
+    return '$trimmed/';
   }
 
   Future<void> _logoutAndRedirect() async {

@@ -3,8 +3,8 @@ class AppConfig {
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    // defaultValue: 'http://vpn.dptsolution.net:854/hrm/api/',
-    defaultValue: 'http://hrm.vietgoat.com:854/',
+    // defaultValue: 'http://erp.vietgoat.com:854/hrm/api/',
+    defaultValue: 'http://192.168.1.5:3004/api/', // Local development IP
   );
 
   static const int shiftHourCompensation = int.fromEnvironment(

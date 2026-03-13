@@ -474,13 +474,11 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       ];
     }
 
-    // Logic kiểm tra vị trí (Duy đang để Demo: Luôn cho phép)
-    bool isValidLocation = locations.isNotEmpty || true;
+    // Xác định vị trí khớp dựa trên danh sách từ server (ControlArea)
+    bool isValidLocation = locations.isNotEmpty;
     bool isValidWifi = true;
-    int? matchedId = locations.isNotEmpty ? locations.first.id : 15;
-    String matchedName = locations.isNotEmpty
-        ? locations.first.name
-        : 'Vị trí Demo';
+    int? matchedId = locations.isNotEmpty ? locations.first.id : null;
+    String matchedName = locations.isNotEmpty ? locations.first.name : 'Unknown';
 
     emit(
       state.copyWith(

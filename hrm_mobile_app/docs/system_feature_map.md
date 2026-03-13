@@ -232,6 +232,7 @@ Quản lý trực tiếp xem xét
 
 ### Ưu tiên cao (Backend DB)
 1. **Deploy SP `sp_GetDailyTimesheetSummary`** lên server Production/VPN
+   Ghi chu KIA: DB KIA ban dau chua co proc nay. Da co script bo sung tai [sp_GetDailyTimesheetSummary_kia.sql](/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/docs/sp_GetDailyTimesheetSummary_kia.sql) va checklist verify tai [kia_backend_summary_verification.md](/Users/baoduy/Documents/work/HRM-Mobile-App/hrm_mobile_app/docs/kia_backend_summary_verification.md).
 2. **JOIN đơn nghỉ phép** vào SP để nhả cờ `P` và `x/P`
 3. **JOIN đơn OT** vào SP để trả `otEligibleMinutes` / `otApprovedMinutes`
 

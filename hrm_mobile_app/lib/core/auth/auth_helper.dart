@@ -113,6 +113,22 @@ class AuthHelper {
     await _storage.write(key: _kStaffCode, value: staffCode);
   }
 
+  static Future<void> saveEmployeeId(int employeeId) async {
+    await _storage.write(key: _kEmployeeId, value: employeeId.toString());
+  }
+
+  static Future<void> saveSiteId(String siteId) async {
+    await _storage.write(key: _kSiteId, value: siteId);
+  }
+
+  static Future<void> saveFullName(String fullName) async {
+    await _storage.write(key: _kFullName, value: fullName);
+  }
+
+  static Future<void> saveUserName(String username) async {
+    await _storage.write(key: _kUsername, value: username);
+  }
+
   /// Returns stored employee ID, or null if not set.
   static Future<int?> getEmployeeId() async {
     final value = await _storage.read(key: _kEmployeeId);

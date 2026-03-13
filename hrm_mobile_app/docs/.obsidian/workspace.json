@@ -11,14 +11,10 @@
             "id": "f11bc6431bdb8f4f",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "attendance_test_usecase.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "attendance_test_usecase"
+              "title": "New tab"
             }
           }
         ]
@@ -185,6 +181,10 @@
   },
   "active": "f11bc6431bdb8f4f",
   "lastOpenFiles": [
+    "kia_leave_e2e_test_flow.md",
+    "kia_backend_summary_verification.md",
+    "frontend_clean_guide.md",
+    "attendance_test_usecase.md",
     "business_trip_mobile_flow.md"
   ]
 }

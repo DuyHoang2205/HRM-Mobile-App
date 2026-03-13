@@ -335,6 +335,20 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       }
       allLogs = uniqueLogs;
 
+      if (summariesMap.isEmpty) {
+        summariesMap = await _buildSummariesFromScans(
+          employeeId: employeeId ?? 0,
+          siteID: siteID,
+          start: start,
+          end: queryEnd,
+          logs: allLogs,
+        );
+        await _overlayLeaves(summariesMap, employeeId ?? 0, start.year, siteID);
+        _debug(
+          '[DailySummary] fallback from scans total keys = ${summariesMap.keys.length}',
+        );
+      }
+
       // Sort by timestamp desc
       allLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
@@ -438,10 +452,228 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     return result;
   }
 
+  Future<Map<String, DailySummary>> _buildSummariesFromScans({
+    required int employeeId,
+    required String siteID,
+    required DateTime start,
+    required DateTime end,
+    required List<AttendanceLog> logs,
+  }) async {
+    final result = <String, DailySummary>{};
+    if (employeeId <= 0) return result;
+
+    final logsByDate = <String, List<AttendanceLog>>{};
+    for (final log in logs) {
+      final key = _fmtDate(log.timestamp);
+      (logsByDate[key] ??= <AttendanceLog>[]).add(log);
+    }
+
+    final days = end.difference(start).inDays;
+    for (int i = 0; i <= days; i++) {
+      final day = DateTime(start.year, start.month, start.day + i);
+      final dayStr = _fmtDate(day);
+      final shiftRow = await _fetchShiftRow(
+        employeeId: employeeId,
+        siteID: siteID,
+        dayStr: dayStr,
+      );
+
+      final dayLogs = (logsByDate[dayStr] ?? <AttendanceLog>[])
+        ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+      final firstLog = dayLogs.isNotEmpty ? dayLogs.first.timestamp : null;
+      final lastLog = dayLogs.isNotEmpty ? dayLogs.last.timestamp : null;
+
+      final shiftTitle = shiftRow == null
+          ? null
+          : (_pickAny(shiftRow, const ['title', 'Title']))?.toString();
+      final shiftCode = shiftRow == null
+          ? null
+          : (_pickAny(shiftRow, const ['code', 'Code', 'title', 'Title']))
+                ?.toString();
+      final shiftId = shiftRow == null
+          ? null
+          : _toInt(_pickAny(shiftRow, const ['id', 'ID']));
+      final from = shiftRow == null
+          ? null
+          : _parseBackendTime(
+              _pickAny(shiftRow, const ['fromTime', 'FromTime'])?.toString(),
+            );
+      final to = shiftRow == null
+          ? null
+          : _parseBackendTime(
+              _pickAny(shiftRow, const ['toTime', 'ToTime'])?.toString(),
+            );
+      final breakStart = shiftRow == null
+          ? null
+          : _parseBackendTime(
+              _pickAny(
+                shiftRow,
+                const ['startBreak', 'StartBreak'],
+              )?.toString(),
+            );
+      final breakEnd = shiftRow == null
+          ? null
+          : _parseBackendTime(
+              _pickAny(shiftRow, const ['endBreak', 'EndBreak'])?.toString(),
+            );
+      final isCrossDay = shiftRow == null
+          ? null
+          : _toInt(_pickAny(shiftRow, const ['isCrossDay', 'IsCrossDay'])) == 1;
+
+      final workedMinutes = _calculateWorkedMinutes(
+        firstLog: firstLog,
+        lastLog: lastLog,
+        breakStart: breakStart,
+        breakEnd: breakEnd,
+      );
+      final breakMinutes = _calculateBreakMinutes(
+        firstLog: firstLog,
+        lastLog: lastLog,
+        breakStart: breakStart,
+        breakEnd: breakEnd,
+      );
+      final timeCalculate =
+          shiftRow == null
+              ? null
+              : ((_pickAny(
+                          shiftRow,
+                          const ['timeCalculate', 'TimeCalculate'],
+                        ) !=
+                        null)
+                    ? _toDouble(
+                        _pickAny(
+                          shiftRow,
+                          const ['timeCalculate', 'TimeCalculate'],
+                        ),
+                      )
+                    : _toDouble(
+                        _pickAny(shiftRow, const ['workTime', 'WorkTime']),
+                      ));
+      final requiredHours =
+          shiftRow == null
+              ? 8.0
+              : _toDouble(_pickAny(shiftRow, const ['workTime', 'WorkTime']));
+
+      final lateMinutes =
+          (from != null && firstLog != null && firstLog.isAfter(from))
+              ? firstLog.difference(from).inMinutes
+              : 0;
+      final earlyLeaveMinutes =
+          (to != null &&
+                  lastLog != null &&
+                  (isCrossDay != true) &&
+                  lastLog.isBefore(to))
+              ? to.difference(lastLog).inMinutes
+              : 0;
+
+      final rawWorkedHours =
+          firstLog == null || lastLog == null ? null : workedMinutes / 60.0;
+
+      final symbol =
+          firstLog == null || lastLog == null
+              ? '0'
+              : ((timeCalculate ?? requiredHours) > 0 &&
+                        rawWorkedHours != null &&
+                        rawWorkedHours >= (timeCalculate ?? requiredHours))
+              ? '1'
+              : 'x/P';
+
+      result[dayStr] = DailySummary(
+        date: dayStr,
+        shiftID: shiftId,
+        shiftCode: shiftCode,
+        shiftTitle: shiftTitle,
+        shiftFromTime: from == null ? null : _fmtHHmmss(from),
+        shiftToTime: to == null ? null : _fmtHHmmss(to),
+        firstIn: firstLog == null ? null : _fmtHHmmss(firstLog),
+        lastOut: lastLog == null ? null : _fmtHHmmss(lastLog),
+        rawWorkedHours: rawWorkedHours == null
+            ? null
+            : double.parse(rawWorkedHours.toStringAsFixed(2)),
+        requiredHours: requiredHours,
+        timeCalculate: timeCalculate,
+        breakMinutesDeducted: breakMinutes,
+        lateMinutes: lateMinutes,
+        earlyLeaveMinutes: earlyLeaveMinutes,
+        isCrossDay: isCrossDay,
+        daySymbol: symbol,
+      );
+    }
+
+    return result;
+  }
+
+  Future<Map<String, dynamic>?> _fetchShiftRow({
+    required int employeeId,
+    required String siteID,
+    required String dayStr,
+  }) async {
+    try {
+      final response = await _dioClient.dio.post(
+        'shift/getShiftByDay',
+        data: {'employeeID': employeeId, 'date': dayStr, 'siteID': siteID},
+      );
+      final ok =
+          (response.statusCode ?? 0) >= 200 &&
+          (response.statusCode ?? 0) < 300;
+      if (!ok || response.data is! List) return null;
+      final rows = response.data as List;
+      if (rows.isEmpty || rows.first is! Map) return null;
+      return Map<String, dynamic>.from(rows.first as Map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  int _calculateWorkedMinutes({
+    required DateTime? firstLog,
+    required DateTime? lastLog,
+    required DateTime? breakStart,
+    required DateTime? breakEnd,
+  }) {
+    if (firstLog == null || lastLog == null) return 0;
+    final raw = lastLog.difference(firstLog).inMinutes;
+    return raw - _calculateBreakMinutes(
+      firstLog: firstLog,
+      lastLog: lastLog,
+      breakStart: breakStart,
+      breakEnd: breakEnd,
+    );
+  }
+
+  int _calculateBreakMinutes({
+    required DateTime? firstLog,
+    required DateTime? lastLog,
+    required DateTime? breakStart,
+    required DateTime? breakEnd,
+  }) {
+    if (firstLog == null ||
+        lastLog == null ||
+        breakStart == null ||
+        breakEnd == null) {
+      return 0;
+    }
+    if (!firstLog.isBefore(breakEnd) || !lastLog.isAfter(breakStart)) {
+      return 0;
+    }
+
+    final overlapStart = firstLog.isAfter(breakStart) ? firstLog : breakStart;
+    final overlapEnd = lastLog.isBefore(breakEnd) ? lastLog : breakEnd;
+    if (!overlapEnd.isAfter(overlapStart)) return 0;
+    return overlapEnd.difference(overlapStart).inMinutes;
+  }
+
   double _toDouble(dynamic value) {
     if (value == null) return 0;
     if (value is num) return value.toDouble();
     return double.tryParse(value.toString()) ?? 0;
+  }
+
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
   }
 
   Duration? _durationFromHourDecimal(double hourValue) {
@@ -485,6 +717,19 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     } catch (_) {
       return null;
     }
+  }
+
+  String _fmtDate(DateTime value) =>
+      "${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}";
+
+  String _fmtHHmmss(DateTime value) =>
+      "${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}:${value.second.toString().padLeft(2, '0')}";
+
+  dynamic _pickAny(Map<String, dynamic> row, List<String> keys) {
+    for (final key in keys) {
+      if (row.containsKey(key) && row[key] != null) return row[key];
+    }
+    return null;
   }
 
   Future<Response<dynamic>> _fetchDailySummary({
