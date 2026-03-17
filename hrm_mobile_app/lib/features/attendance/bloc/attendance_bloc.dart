@@ -20,6 +20,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   final Map<String, _AttendanceRangeCache> _rangeCache = {};
   final Map<String, List<AttendanceLog>> _scanDayCache = {};
   final Map<String, Map<String, dynamic>?> _shiftRowCache = {};
+  final Map<String, List<dynamic>> _approvedLeavesCache = {};
+  final Map<String, Map<int, String>> _permissionSymbolCache = {};
   String? _inFlightRangeKey;
 
   AttendanceBloc() : super(AttendanceState.initial()) {
@@ -188,6 +190,12 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     bool force = false,
   }) async {
     try {
+      if (force) {
+        _rangeCache.clear();
+        _scanDayCache.clear();
+        _shiftRowCache.clear();
+      }
+
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
       final fullName = await AuthHelper.getFullName() ?? 'Trung Nguyen';
@@ -289,30 +297,20 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       } catch (_) {}
 
       if (allLogs.isEmpty) {
+        final futures = <Future<List<AttendanceLog>>>[];
         for (int i = 0; i <= daysDiff; i++) {
           final date = start.add(Duration(days: i));
-          final dayKey = '${employeeId ?? 0}|$siteID|${fmt(date)}';
-          final cachedLogs = _scanDayCache[dayKey];
-          if (cachedLogs != null) {
-            allLogs.addAll(cachedLogs);
-            continue;
-          }
-          try {
-            final response = await _dioClient.dio.post(
-              'attendance/getScanByDay/$siteID',
-              data: {'employeeID': employeeId, 'day': fmt(date)},
-            );
-            if (response.data is List) {
-              final list = response.data as List;
-              final parsed = list
-                  .map(
-                    (e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)),
-                  )
-                  .toList();
-              _scanDayCache[dayKey] = parsed;
-              allLogs.addAll(parsed);
-            }
-          } catch (_) {}
+          futures.add(
+            _fetchScanLogsByDay(
+              employeeId: employeeId ?? 0,
+              siteID: siteID,
+              dayStr: fmt(date),
+            ),
+          );
+        }
+        final perDayLogs = await Future.wait(futures);
+        for (final logs in perDayLogs) {
+          allLogs.addAll(logs);
         }
       }
 
@@ -639,16 +637,55 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     if (employeeId <= 0) return result;
 
     final days = end.difference(start).inDays;
+    final futures = <Future<MapEntry<String, Map<String, dynamic>?>>>[];
     for (int i = 0; i <= days; i++) {
       final day = DateTime(start.year, start.month, start.day + i);
       final dayStr = _fmtDate(day);
-      result[dayStr] = await _fetchShiftRow(
-        employeeId: employeeId,
-        siteID: siteID,
-        dayStr: dayStr,
+      futures.add(
+        _fetchShiftRow(
+          employeeId: employeeId,
+          siteID: siteID,
+          dayStr: dayStr,
+        ).then((row) => MapEntry(dayStr, row)),
       );
     }
+    final entries = await Future.wait(futures);
+    for (final entry in entries) {
+      result[entry.key] = entry.value;
+    }
     return result;
+  }
+
+  Future<List<AttendanceLog>> _fetchScanLogsByDay({
+    required int employeeId,
+    required String siteID,
+    required String dayStr,
+  }) async {
+    if (employeeId <= 0) return const [];
+    final dayKey = '$employeeId|$siteID|$dayStr';
+    final cachedLogs = _scanDayCache[dayKey];
+    if (cachedLogs != null) {
+      return cachedLogs;
+    }
+
+    try {
+      final response = await _dioClient.dio.post(
+        'attendance/getScanByDay/$siteID',
+        data: {'employeeID': employeeId, 'day': dayStr},
+      );
+      if (response.data is! List) {
+        _scanDayCache[dayKey] = const [];
+        return const [];
+      }
+      final parsed = (response.data as List)
+          .map((e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+      _scanDayCache[dayKey] = parsed;
+      return parsed;
+    } catch (_) {
+      _scanDayCache[dayKey] = const [];
+      return const [];
+    }
   }
 
   int _calculateWorkedMinutes({
@@ -837,18 +874,29 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     String siteID,
   ) async {
     try {
+      final leaveKey = '$employeeId|$year|$siteID';
+      final symbolKey = siteID;
       final leaveRepo = LeaveRepository();
-      final leaves = await leaveRepo.getLeaveRequests(
-        employeeID: employeeId,
-        year: year,
-        siteID: siteID,
-      );
-      final permissionTypes = await leaveRepo.getPermissionTypes(siteID);
-      final symbolByPermissionId = <int, String>{
-        for (final p in permissionTypes) p.id: p.symbol.trim().toUpperCase(),
-      };
 
-      final approvedLeaves = leaves.where((l) => l.status == 3).toList();
+      final approvedLeaves =
+          _approvedLeavesCache[leaveKey] ??
+          (await leaveRepo.getLeaveRequests(
+            employeeID: employeeId,
+            year: year,
+            siteID: siteID,
+          ))
+              .where((l) => l.status == 3)
+              .toList();
+      _approvedLeavesCache[leaveKey] = approvedLeaves;
+
+      final symbolByPermissionId =
+          _permissionSymbolCache[symbolKey] ??
+          {
+            for (final p in await leaveRepo.getPermissionTypes(siteID))
+              p.id: p.symbol.trim().toUpperCase(),
+          };
+      _permissionSymbolCache[symbolKey] = symbolByPermissionId;
+
       for (var leave in approvedLeaves) {
         DateTime current = DateTime(
           leave.fromDate.year,
