@@ -90,6 +90,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         ),
       );
     });
+    
+    on<ProfileInfoSynced>((event, emit) {
+      emit(state.copyWith(
+        name: event.name,
+        role: event.role,
+      ));
+    });
   }
 
   Future<void> _onAttendanceLogsRequested(
@@ -101,7 +108,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
-      final fullName = await AuthHelper.getFullName() ?? 'Trung Nguyen';
+      var fullName = await AuthHelper.getFullName() ?? 'Trung Nguyen';
+
+      // Override for Administrator account to show a real name
+      if (fullName.toLowerCase() == 'administratorv' ||
+          fullName.toLowerCase() == 'administrator') {
+        fullName = 'Cao Văn Đồng';
+      }
 
       // Setup dynamic role and initials based on current user
       final role = fullName.contains('Bảo Duy')
@@ -199,23 +212,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         );
       }
 
-      final responses = await Future.wait(fetchFutures);
-
-      for (final response in responses) {
+      for (final future in fetchFutures) {
         try {
+          final response = await future;
           if (response.data is List) {
             final dailyLogs = (response.data as List)
                 .map(
                   (e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)),
                 )
                 .toList();
-
-            // Note: dailyLogs might duplicate logs if we fetch overlapping ranges, but here we fetch distinct days.
-            // However, if we combine with OLD LOGIC (which we aren't), we'd need deduplication.
             logs.addAll(dailyLogs);
           }
         } catch (e) {
-          debugPrint('HomeBloc: Error parsing daily log: $e');
+          debugPrint('HomeBloc: Error fetching/parsing daily log: $e');
         }
       }
       // --- END NEW LOGIC ---

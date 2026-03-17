@@ -19,6 +19,11 @@ class FolderSection extends StatelessWidget {
         action: FolderAction.salary,
       ),
       const _FolderData(
+        title: 'Giải trình công',
+        icon: Icons.edit_note_rounded,
+        action: FolderAction.explanation,
+      ),
+      const _FolderData(
         title: 'Làm ngoài giờ',
         icon: Icons.access_time_rounded,
         action: FolderAction.overtime,
@@ -27,11 +32,6 @@ class FolderSection extends StatelessWidget {
         title: 'Nghỉ phép',
         icon: Icons.calendar_month_rounded,
         action: FolderAction.leave,
-      ),
-      const _FolderData(
-        title: 'Công tác',
-        icon: Icons.work_outline_rounded,
-        action: FolderAction.businessTrip,
       ),
     ];
 
@@ -74,7 +74,7 @@ class FolderSection extends StatelessWidget {
   }
 }
 
-enum FolderAction { attendance, salary, overtime, leave, businessTrip }
+enum FolderAction { attendance, salary, explanation, overtime, leave, businessTrip }
 
 class _FolderData {
   final String title;

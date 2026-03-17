@@ -46,6 +46,7 @@ class _AttendanceExplanationPageState extends State<AttendanceExplanationPage> {
     'Quên chấm công',
     'Thiết bị lỗi',
     'Đi công tác',
+    'Về sớm/Đi trễ',
     'Sự cố cá nhân',
   ];
 

@@ -37,3 +37,12 @@ class CheckResultArrived extends HomeEvent {
 class NotificationTapped extends HomeEvent {}
 
 class CheckInTapped extends HomeEvent {}
+
+class ProfileInfoSynced extends HomeEvent {
+  final String name;
+  final String role;
+  const ProfileInfoSynced({required this.name, required this.role});
+
+  @override
+  List<Object?> get props => [name, role];
+}

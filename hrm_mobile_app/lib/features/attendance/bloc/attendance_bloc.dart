@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,13 +17,19 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
   static const int _shiftServerHourCompensation =
       AppConfig.shiftHourCompensation;
   final DioClient _dioClient = DioClient();
+  final Map<String, _AttendanceRangeCache> _rangeCache = {};
+  final Map<String, List<AttendanceLog>> _scanDayCache = {};
+  final Map<String, Map<String, dynamic>?> _shiftRowCache = {};
+  String? _inFlightRangeKey;
 
   AttendanceBloc() : super(AttendanceState.initial()) {
-    on<AttendanceStarted>(_onLoad);
-    on<AttendanceRefreshed>(_onLoad);
+    on<AttendanceStarted>((event, emit) => _fetchLogs(emit));
+    on<AttendanceRefreshed>((event, emit) => _fetchLogs(emit, force: true));
     on<AttendanceFilterChanged>(_onFilterChanged);
     on<AttendanceTimesheetDateChanged>(_onTimesheetDateChanged);
-    on<AttendanceCheckResultArrived>(_onLoad);
+    on<AttendanceCheckResultArrived>(
+      (event, emit) => _fetchLogs(emit, force: true),
+    );
     on<AttendanceChangeSubmitted>(_onSubmitChange);
   }
 
@@ -154,41 +159,14 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     AttendanceTimesheetDateChanged event,
     Emitter<AttendanceState> emit,
   ) async {
-    try {
-      final employeeId = await AuthHelper.getEmployeeId();
-      final siteID = await AuthHelper.getSiteId();
-
-      String fmt(DateTime d) =>
-          "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
-
-      final summaryResponse = await _fetchDailySummary(
-        siteID: siteID,
-        employeeId: employeeId,
-        fromDate: fmt(event.start),
-        toDate: fmt(event.end),
-        month: event.start.month,
-        year: event.start.year,
-      );
-
-      final raw = summaryResponse.data;
-      final List<dynamic> list = raw is List
-          ? raw
-          : (raw is Map && raw['data'] is List)
-          ? (raw['data'] as List)
-          : const [];
-
-      final newMap = Map<String, DailySummary>.from(state.dailySummaries);
-      for (var item in list) {
-        if (item is! Map) continue;
-        final summary = DailySummary.fromJson(Map<String, dynamic>.from(item));
-        if (summary.date.isEmpty) continue;
-        newMap[summary.date] = summary;
-      }
-
-      await _overlayLeaves(newMap, employeeId ?? 0, event.start.year, siteID);
-
-      emit(state.copyWith(dailySummaries: newMap));
-    } catch (_) {}
+    emit(
+      state.copyWith(
+        filterDate: event.start,
+        endDate: event.end,
+        isLoading: true,
+      ),
+    );
+    await _fetchLogs(emit);
   }
 
   Future<void> _onFilterChanged(
@@ -205,27 +183,45 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     await _fetchLogs(emit);
   }
 
-  Future<void> _onLoad(
-    AttendanceEvent event,
-    Emitter<AttendanceState> emit,
-  ) async {
-    await _fetchLogs(emit);
-  }
-
-  Future<void> _fetchLogs(Emitter<AttendanceState> emit) async {
-    emit(state.copyWith(isLoading: true));
-
+  Future<void> _fetchLogs(
+    Emitter<AttendanceState> emit, {
+    bool force = false,
+  }) async {
     try {
       final employeeId = await AuthHelper.getEmployeeId();
       final siteID = await AuthHelper.getSiteId();
       final fullName = await AuthHelper.getFullName() ?? 'Trung Nguyen';
 
       final start = state.filterDate;
-      // queryEnd is inclusive for filtering
       final DateTime queryEnd = state.endDate ?? DateTime.now();
 
       String fmt(DateTime d) =>
           "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+
+      final rangeKey =
+          '${employeeId ?? 0}|$siteID|${fmt(start)}|${fmt(queryEnd)}';
+
+      if (!force) {
+        final cached = _rangeCache[rangeKey];
+        if (cached != null) {
+          emit(
+            state.copyWith(
+              logs: cached.logs,
+              dayPolicies: cached.dayPolicies,
+              dailySummaries: cached.dailySummaries,
+              isLoading: false,
+              error: null,
+            ),
+          );
+          return;
+        }
+        if (_inFlightRangeKey == rangeKey) {
+          return;
+        }
+      }
+
+      _inFlightRangeKey = rangeKey;
+      emit(state.copyWith(isLoading: true));
 
       List<AttendanceLog> allLogs = [];
       Map<String, DailySummary> summariesMap = {};
@@ -250,7 +246,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
             ? (raw['data'] as List)
             : const [];
 
-        _debug('[DailySummary] list length = ${list.length}');
         for (var item in list) {
           if (item is! Map) continue;
           final summary = DailySummary.fromJson(
@@ -258,15 +253,11 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           );
           if (summary.date.isEmpty) continue;
           summariesMap[summary.date] = summary;
-          _debug(
-            '[DailySummary] loaded key=${summary.date} symbol=${summary.daySymbol}',
-          );
         }
-        _debug('[DailySummary] total keys = ${summariesMap.keys.length}');
 
         await _overlayLeaves(summariesMap, employeeId ?? 0, start.year, siteID);
-      } catch (e, st) {
-        _debug('Failed to fetch daily summaries: $e\n$st');
+      } catch (_) {
+        // Summary endpoint is unstable in this environment; fall back below.
       }
 
       // 2. Fetch Raw Attendance Logs for Timeline UI (Existing logic)
@@ -295,37 +286,33 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
                 .toList();
           }
         }
-      } catch (e) {
-        _debug('byEmployee fallback to getScanByDay due to error: $e');
-      }
+      } catch (_) {}
 
       if (allLogs.isEmpty) {
-        _debug('byEmployee returned empty, using getScanByDay loop fallback');
-        List<Future<Response>> futures = [];
         for (int i = 0; i <= daysDiff; i++) {
           final date = start.add(Duration(days: i));
-          futures.add(
-            _dioClient.dio.post(
+          final dayKey = '${employeeId ?? 0}|$siteID|${fmt(date)}';
+          final cachedLogs = _scanDayCache[dayKey];
+          if (cachedLogs != null) {
+            allLogs.addAll(cachedLogs);
+            continue;
+          }
+          try {
+            final response = await _dioClient.dio.post(
               'attendance/getScanByDay/$siteID',
               data: {'employeeID': employeeId, 'day': fmt(date)},
-            ),
-          );
-        }
-
-        final responses = await Future.wait(futures);
-        for (final response in responses) {
-          try {
+            );
             if (response.data is List) {
               final list = response.data as List;
-              allLogs.addAll(
-                list.map(
-                  (e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)),
-                ),
-              );
+              final parsed = list
+                  .map(
+                    (e) => AttendanceLog.fromJson(Map<String, dynamic>.from(e)),
+                  )
+                  .toList();
+              _scanDayCache[dayKey] = parsed;
+              allLogs.addAll(parsed);
             }
-          } catch (e) {
-            // ignore
-          }
+          } catch (_) {}
         }
       }
 
@@ -335,39 +322,53 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       }
       allLogs = uniqueLogs;
 
-      if (summariesMap.isEmpty) {
-        summariesMap = await _buildSummariesFromScans(
-          employeeId: employeeId ?? 0,
-          siteID: siteID,
-          start: start,
-          end: queryEnd,
-          logs: allLogs,
-        );
-        await _overlayLeaves(summariesMap, employeeId ?? 0, start.year, siteID);
-        _debug(
-          '[DailySummary] fallback from scans total keys = ${summariesMap.keys.length}',
-        );
-      }
+      final shiftRows = await _fetchShiftRowsForRange(
+        employeeId: employeeId ?? 0,
+        siteID: siteID,
+        start: start,
+        end: queryEnd,
+      );
+      final scanSummaries = await _buildSummariesFromScans(
+        employeeId: employeeId ?? 0,
+        siteID: siteID,
+        start: start,
+        end: queryEnd,
+        logs: allLogs,
+        shiftRows: shiftRows,
+      );
+      summariesMap = _mergeScanSummaries(
+        existing: summariesMap,
+        fromScans: scanSummaries,
+      );
+      await _overlayLeaves(summariesMap, employeeId ?? 0, start.year, siteID);
 
       // Sort by timestamp desc
       allLogs.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
       final resolved = AttendanceActionResolver.resolve(allLogs);
-      final finalLogs = resolved
-          .map((log) => log.copyWith(userName: fullName))
-          .toList();
-
       // Keep fetching dayPolicies for now if anything else depends on it
       final dayPolicies = await _fetchDayPolicies(
         employeeId: employeeId ?? 0,
         siteID: siteID,
         start: start,
         end: queryEnd,
+        shiftRows: shiftRows,
       );
+
+      final cachedLogs = resolved
+          .map((log) => log.copyWith(userName: fullName))
+          .toList();
+
+      _rangeCache[rangeKey] = _AttendanceRangeCache(
+        logs: cachedLogs,
+        dayPolicies: dayPolicies,
+        dailySummaries: summariesMap,
+      );
+      _inFlightRangeKey = null;
 
       emit(
         state.copyWith(
-          logs: finalLogs,
+          logs: cachedLogs,
           dayPolicies: dayPolicies,
           dailySummaries: summariesMap,
           isLoading: false,
@@ -375,9 +376,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         ),
       );
     } catch (e, s) {
-      // Never let loading hang
-      _debug('Attendance fetch error: $e');
-      _debug(s.toString());
+      _inFlightRangeKey = null;
 
       emit(
         state.copyWith(
@@ -393,6 +392,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     required String siteID,
     required DateTime start,
     required DateTime end,
+    required Map<String, Map<String, dynamic>?> shiftRows,
   }) async {
     if (employeeId <= 0) return const {};
 
@@ -404,18 +404,8 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final dayStr =
           "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
       try {
-        final response = await _dioClient.dio.post(
-          'shift/getShiftByDay',
-          data: {'employeeID': employeeId, 'date': dayStr, 'siteID': siteID},
-        );
-        final ok =
-            (response.statusCode ?? 0) >= 200 &&
-            (response.statusCode ?? 0) < 300;
-        if (!ok || response.data is! List) continue;
-        final rows = response.data as List;
-        if (rows.isEmpty) continue;
-
-        final row = Map<String, dynamic>.from(rows.first as Map);
+        final row = shiftRows[dayStr];
+        if (row == null) continue;
         final minFromWorkTime = _durationFromHourDecimal(
           _toDouble(row['timeCalculate']) > 0
               ? _toDouble(row['timeCalculate'])
@@ -458,6 +448,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     required DateTime start,
     required DateTime end,
     required List<AttendanceLog> logs,
+    required Map<String, Map<String, dynamic>?> shiftRows,
   }) async {
     final result = <String, DailySummary>{};
     if (employeeId <= 0) return result;
@@ -472,11 +463,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     for (int i = 0; i <= days; i++) {
       final day = DateTime(start.year, start.month, start.day + i);
       final dayStr = _fmtDate(day);
-      final shiftRow = await _fetchShiftRow(
-        employeeId: employeeId,
-        siteID: siteID,
-        dayStr: dayStr,
-      );
+      final shiftRow = shiftRows[dayStr];
 
       final dayLogs = (logsByDate[dayStr] ?? <AttendanceLog>[])
         ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -571,8 +558,10 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
           firstLog == null || lastLog == null ? null : workedMinutes / 60.0;
 
       final symbol =
-          firstLog == null || lastLog == null
+          firstLog == null
               ? '0'
+              : (lastLog == null || !lastLog.isAfter(firstLog))
+              ? 'X'
               : ((timeCalculate ?? requiredHours) > 0 &&
                         rawWorkedHours != null &&
                         rawWorkedHours >= (timeCalculate ?? requiredHours))
@@ -609,6 +598,11 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     required String siteID,
     required String dayStr,
   }) async {
+    final cacheKey = '$employeeId|$siteID|$dayStr';
+    if (_shiftRowCache.containsKey(cacheKey)) {
+      return _shiftRowCache[cacheKey];
+    }
+
     try {
       final response = await _dioClient.dio.post(
         'shift/getShiftByDay',
@@ -617,13 +611,44 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final ok =
           (response.statusCode ?? 0) >= 200 &&
           (response.statusCode ?? 0) < 300;
-      if (!ok || response.data is! List) return null;
+      if (!ok || response.data is! List) {
+        _shiftRowCache[cacheKey] = null;
+        return null;
+      }
       final rows = response.data as List;
-      if (rows.isEmpty || rows.first is! Map) return null;
-      return Map<String, dynamic>.from(rows.first as Map);
+      if (rows.isEmpty || rows.first is! Map) {
+        _shiftRowCache[cacheKey] = null;
+        return null;
+      }
+      final mapped = Map<String, dynamic>.from(rows.first as Map);
+      _shiftRowCache[cacheKey] = mapped;
+      return mapped;
     } catch (_) {
+      _shiftRowCache[cacheKey] = null;
       return null;
     }
+  }
+
+  Future<Map<String, Map<String, dynamic>?>> _fetchShiftRowsForRange({
+    required int employeeId,
+    required String siteID,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final result = <String, Map<String, dynamic>?>{};
+    if (employeeId <= 0) return result;
+
+    final days = end.difference(start).inDays;
+    for (int i = 0; i <= days; i++) {
+      final day = DateTime(start.year, start.month, start.day + i);
+      final dayStr = _fmtDate(day);
+      result[dayStr] = await _fetchShiftRow(
+        employeeId: employeeId,
+        siteID: siteID,
+        dayStr: dayStr,
+      );
+    }
+    return result;
   }
 
   int _calculateWorkedMinutes({
@@ -732,6 +757,42 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     return null;
   }
 
+  Map<String, DailySummary> _mergeScanSummaries({
+    required Map<String, DailySummary> existing,
+    required Map<String, DailySummary> fromScans,
+  }) {
+    final merged = <String, DailySummary>{...existing};
+    for (final entry in fromScans.entries) {
+      final current = merged[entry.key];
+      final incoming = entry.value;
+      if (current == null || _shouldReplaceWithScan(current, incoming)) {
+        merged[entry.key] = incoming;
+      }
+    }
+    return merged;
+  }
+
+  bool _shouldReplaceWithScan(DailySummary current, DailySummary incoming) {
+    if ((current.firstIn == null || current.firstIn!.isEmpty) &&
+        incoming.firstIn != null &&
+        incoming.firstIn!.isNotEmpty) {
+      return true;
+    }
+    if ((current.lastOut == null || current.lastOut!.isEmpty) &&
+        incoming.lastOut != null &&
+        incoming.lastOut!.isNotEmpty) {
+      return true;
+    }
+    final currentSymbol = current.daySymbol.trim().toUpperCase();
+    final incomingSymbol = incoming.daySymbol.trim().toUpperCase();
+    if ((currentSymbol.isEmpty || currentSymbol == '0') &&
+        incomingSymbol.isNotEmpty &&
+        incomingSymbol != '0') {
+      return true;
+    }
+    return false;
+  }
+
   Future<Response<dynamic>> _fetchDailySummary({
     required String siteID,
     required int? employeeId,
@@ -767,10 +828,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     }
   }
 
-  void _debug(String message) {
-    if (!kDebugMode) return;
-    debugPrint(message);
-  }
+  void _debug(String message) {}
 
   Future<void> _overlayLeaves(
     Map<String, DailySummary> map,
@@ -791,7 +849,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       };
 
       final approvedLeaves = leaves.where((l) => l.status == 3).toList();
-      _debug('[Overlay] ${approvedLeaves.length} approved leaves to overlay');
       for (var leave in approvedLeaves) {
         DateTime current = DateTime(
           leave.fromDate.year,
@@ -810,7 +867,11 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         final leaveSymbol =
             symbolByPermissionId[leave.permissionType]?.trim().toUpperCase() ??
             'P';
-        final isBusinessTrip = leaveSymbol == 'C';
+        final normalizedLeaveSymbol = switch (leaveSymbol) {
+          'CT' => 'C',
+          _ => leaveSymbol,
+        };
+        final isBusinessTrip = normalizedLeaveSymbol == 'C';
         final isFullDayLeave = isMultiDay || leave.qty >= 1;
 
         while (current.compareTo(end) <= 0) {
@@ -853,9 +914,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
                   existing?.businessTripCode ?? leave.permissionType.toString(),
               finalizeStatus: existing?.finalizeStatus,
             );
-            _debug(
-              '[Overlay] Force C on $dateStr (prev: ${existing?.daySymbol})',
-            );
           } else if (isFullDayLeave) {
             // Full-day leave has highest priority.
             map[dateStr] = DailySummary(
@@ -870,9 +928,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
               shiftToTime: existing?.shiftToTime,
               leaveType: leave.description,
             );
-            _debug(
-              '[Overlay] Force P on $dateStr (prev: ${existing?.daySymbol})',
-            );
           } else if (isMissingOrEmpty) {
             // Half-day leave on empty/missing day -> mark as leave.
             map[dateStr] = DailySummary(
@@ -886,9 +941,6 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
               shiftFromTime: existing?.shiftFromTime,
               shiftToTime: existing?.shiftToTime,
               leaveType: leave.description,
-            );
-            _debug(
-              '[Overlay] Add P on $dateStr (prev: ${existing?.daySymbol})',
             );
           } else {
             // Half-day leave + existing attendance -> x/P
@@ -917,13 +969,22 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
               businessTripCode: existing.businessTripCode,
               finalizeStatus: existing.finalizeStatus,
             );
-            _debug('[Overlay] Merge half-day leave -> x/P on $dateStr');
           }
           current = current.add(const Duration(days: 1));
         }
       }
-    } catch (e, st) {
-      _debug('Overlay leave error: $e\n$st');
-    }
+    } catch (_) {}
   }
+}
+
+class _AttendanceRangeCache {
+  final List<AttendanceLog> logs;
+  final Map<String, AttendancePolicyConfig> dayPolicies;
+  final Map<String, DailySummary> dailySummaries;
+
+  const _AttendanceRangeCache({
+    required this.logs,
+    required this.dayPolicies,
+    required this.dailySummaries,
+  });
 }

@@ -154,7 +154,8 @@ class DailySummary {
     final text = value.toString().trim();
     if (text.isEmpty) return '';
     try {
-      final dt = DateTime.parse(text);
+      final parsed = DateTime.parse(text);
+      final dt = parsed.isUtc ? parsed.toLocal() : parsed;
       final y = dt.year.toString().padLeft(4, '0');
       final m = dt.month.toString().padLeft(2, '0');
       final d = dt.day.toString().padLeft(2, '0');

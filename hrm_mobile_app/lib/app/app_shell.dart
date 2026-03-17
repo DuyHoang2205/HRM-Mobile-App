@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hrm_mobile_app/features/home/view/home_page.dart';
-import '../../../core/widgets/placeholder_page.dart';
 import '../../features/leave/view/leave_registration_page.dart';
-import '../../features/overtime/view/overtime_list_page.dart';
+import '../../features/attendance/view/attendance_explanation_list_page.dart';
+import '../../features/attendance/bloc/attendance_bloc.dart';
+import '../../features/attendance/bloc/attendance_event.dart';
+import '../../features/profile/view/profile_page.dart';
+import '../../features/profile/bloc/profile_bloc.dart';
+import '../../features/profile/bloc/profile_state.dart';
+import '../../features/home/bloc/home_bloc.dart';
+import '../../features/home/bloc/home_event.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -17,9 +24,7 @@ class _AppShellState extends State<AppShell> {
 
   final _pages = const [
     HomePage(),
-    PlaceholderPage(title: 'My task'),
-    PlaceholderPage(title: 'Payment'),
-    PlaceholderPage(title: 'Profile'),
+    ProfilePage(),
   ];
 
   // 1. Change to async
@@ -53,7 +58,22 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F7FB),
 
-      body: IndexedStack(index: _index, children: _pages),
+      body: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => HomeBloc()..add(const HomeStarted())),
+          BlocProvider(create: (_) => ProfileBloc()..add(const ProfileRequested())),
+        ],
+        child: BlocListener<ProfileBloc, ProfileState>(
+          listenWhen: (prev, curr) => curr.status == ProfileStatus.success && curr.profile != null,
+          listener: (context, state) {
+            context.read<HomeBloc>().add(ProfileInfoSynced(
+              name: state.profile!.fullName,
+              role: state.profile!.position ?? 'Giám Đốc',
+            ));
+          },
+          child: IndexedStack(index: _index, children: _pages),
+        ),
+      ),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox(
@@ -94,32 +114,14 @@ class _AppShellState extends State<AppShell> {
                   onTap: () => setState(() => _index = 0),
                 ),
               ),
-              Expanded(
-                child: _NavItem(
-                  label: 'My task',
-                  icon: Icons.task_alt_outlined,
-                  activeIcon: Icons.task_alt,
-                  selected: _index == 1,
-                  onTap: () => setState(() => _index = 1),
-                ),
-              ),
-              const SizedBox(width: 62),
-              Expanded(
-                child: _NavItem(
-                  label: 'Payment',
-                  icon: Icons.attach_money_outlined,
-                  activeIcon: Icons.attach_money,
-                  selected: _index == 2,
-                  onTap: () => setState(() => _index = 2),
-                ),
-              ),
+              const SizedBox(width: 80),
               Expanded(
                 child: _NavItem(
                   label: 'Profile',
                   icon: Icons.person_outline,
                   activeIcon: Icons.person,
-                  selected: _index == 3,
-                  onTap: () => setState(() => _index = 3),
+                  selected: _index == 1,
+                  onTap: () => setState(() => _index = 1),
                 ),
               ),
             ],
@@ -266,22 +268,18 @@ class _PlusMenuOverlay extends StatelessWidget {
                           ),
                         ),
                       ),
+
                       _PlusMenuItem(
-                        icon: Icons.timelapse,
-                        label: 'Đăng ký làm thêm',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const OvertimeListPage(),
-                          ),
-                        ),
-                      ),
-                      const _PlusMenuItem(
-                        icon: Icons.flight_takeoff,
-                        label: 'Đăng ký công tác',
-                      ),
-                      const _PlusMenuItem(
                         icon: Icons.receipt_long,
                         label: 'Giải trình chấm công',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => BlocProvider(
+                              create: (_) => AttendanceBloc()..add(const AttendanceStarted()),
+                              child: const AttendanceExplanationListPage(),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

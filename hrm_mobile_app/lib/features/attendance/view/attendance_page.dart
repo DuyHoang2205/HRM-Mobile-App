@@ -10,13 +10,32 @@ import '../bloc/attendance_state.dart';
 import '../models/attendance_log.dart';
 import 'timesheet_page.dart';
 
-class AttendancePage extends StatelessWidget {
+class AttendancePage extends StatefulWidget {
   const AttendancePage({super.key});
 
   @override
+  State<AttendancePage> createState() => _AttendancePageState();
+}
+
+class _AttendancePageState extends State<AttendancePage> {
+  late final AttendanceBloc _bloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _bloc = AttendanceBloc()..add(const AttendanceStarted());
+  }
+
+  @override
+  void dispose() {
+    _bloc.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AttendanceBloc()..add(const AttendanceStarted()),
+    return BlocProvider.value(
+      value: _bloc,
       child: const _AttendanceView(),
     );
   }

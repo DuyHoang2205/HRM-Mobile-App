@@ -53,15 +53,9 @@ class LeaveRequest {
       employeeID: (json['employeeID'] as num?)?.toInt() ?? 0,
       status: (json['status'] as num?)?.toInt() ?? 0,
       permissionType: (json['permissionType'] as num?)?.toInt() ?? 0,
-      fromDate: json['fromDate'] != null
-          ? DateTime.parse(json['fromDate'].toString())
-          : DateTime.now(),
-      toDate: json['toDate'] != null
-          ? DateTime.parse(json['toDate'].toString())
-          : DateTime.now(),
-      expired: json['expired'] != null
-          ? DateTime.parse(json['expired'].toString())
-          : DateTime.now(),
+      fromDate: _parseApiDate(json['fromDate']),
+      toDate: _parseApiDate(json['toDate']),
+      expired: _parseApiDate(json['expired']),
       qty: (json['qty'] as num?)?.toDouble() ?? 0.0,
       year: (json['year'] as num?)?.toInt() ?? DateTime.now().year,
       description: json['description']?.toString() ?? '',
@@ -96,4 +90,14 @@ class LeaveRequest {
   @override
   String toString() =>
       'LeaveRequest(id: $id, employeeID: $employeeID, permissionType: $permissionType, status: $status)';
+
+  static DateTime _parseApiDate(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    final parsed = DateTime.parse(raw.toString());
+    // SQL `date` fields are serialized by the API as UTC timestamps
+    // shifted back from local midnight (for example 2026-02-05 becomes
+    // 2026-02-04T17:00:00.000Z in Asia/Ho_Chi_Minh). Convert to local
+    // immediately so overlay logic uses the intended calendar day.
+    return parsed.isUtc ? parsed.toLocal() : parsed;
+  }
 }

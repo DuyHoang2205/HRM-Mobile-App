@@ -134,10 +134,15 @@ class _AttendanceExplanationListPageState
       final symbol = s.daySymbol.trim().toLowerCase();
       if (!_hasAssignedShift(s)) return false;
 
-      // Chỉ hiện các ngày lỗi thực sự cần giải trình:
-      // - x: thiếu check-in/check-out (quên checkout là case phổ biến)
-      // - 0: vắng mặt ngày có ca làm và chưa có đơn nghỉ phép/công tác
-      return symbol == '0' || symbol == 'x';
+      // Hiện các ngày cần giải trình:
+      // - x: thiếu check-in/check-out
+      // - 0: vắng mặt 
+      // - lateMinutes > 0: đi trễ
+      // - earlyLeaveMinutes > 0: về sớm
+      return symbol == '0' || 
+             symbol == 'x' || 
+             s.lateMinutes > 0 || 
+             s.earlyLeaveMinutes > 0;
     }).toList();
 
     items.sort((a, b) => b.date.compareTo(a.date));
@@ -237,6 +242,8 @@ class _NeedExplainCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 4),
+              _buildReasonBadges(summary),
               const SizedBox(height: 8),
               Text(
                 'Vào: ${summary.firstIn ?? '--'}  •  Ra: ${summary.lastOut ?? '--'}',
@@ -262,6 +269,41 @@ class _NeedExplainCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildReasonBadges(DailySummary summary) {
+    final reasons = <String>[];
+    final symbol = summary.daySymbol.trim().toUpperCase();
+    if (symbol == '0') reasons.add('Vắng mặt');
+    if (symbol == 'X') reasons.add('Thiếu log');
+    if (summary.lateMinutes > 0) reasons.add('Đi trễ ${summary.lateMinutes}p');
+    if (summary.earlyLeaveMinutes > 0) {
+      reasons.add('Về sớm ${summary.earlyLeaveMinutes}p');
+    }
+
+    if (reasons.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: reasons.map((r) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFEE2E2),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            r,
+            style: const TextStyle(
+              color: Color(0xFFDC2626),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -15,18 +15,38 @@ class TimesheetPage extends StatefulWidget {
 class _TimesheetPageState extends State<TimesheetPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _weeklyLoaded = false;
 
   @override
   void initState() {
     super.initState();
-    // We have 4 tabs: Công tháng, Công tuần, Thống kê, Danh sách
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(_handleTabChanged);
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    if (_tabController.index == 1 && !_weeklyLoaded) {
+      _weeklyLoaded = true;
+      final now = DateTime.now();
+      final offset = now.weekday - 1;
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: offset));
+      final end = start.add(const Duration(days: 6));
+      context.read<AttendanceBloc>().add(
+        AttendanceTimesheetDateChanged(start: start, end: end),
+      );
+    }
   }
 
   @override
@@ -406,7 +426,6 @@ class _WeeklyTimesheetTabState extends State<_WeeklyTimesheetTab> {
       now.month,
       now.day,
     ).subtract(Duration(days: offset));
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchWeek());
   }
 
   void _fetchWeek() {

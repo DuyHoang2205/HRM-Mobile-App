@@ -125,17 +125,6 @@ class AuthRepository {
       return response;
     }
 
-    final fallback = _localFallbackIdentity(username: username, siteId: siteId);
-    if (fallback != null) {
-      return response.copyWith(
-        employeeId: fallback.employeeId,
-        siteId: fallback.siteId,
-        fullName: response.fullName ?? fallback.fullName,
-        staffCode: response.staffCode ?? fallback.staffCode,
-        username: response.username ?? username,
-      );
-    }
-
     final resolved = await _resolveEmployeeBySite(
       username: username,
       siteId: siteId,
@@ -174,52 +163,74 @@ class AuthRepository {
     );
 
     try {
-      final response = await dio.get(
-        '/employee/list-employee',
-        queryParameters: {'site': siteId},
-        options: Options(
-          headers: {
-            if ((accessToken ?? '').isNotEmpty)
-              'Authorization': 'Bearer $accessToken',
-            'Accept': 'application/json',
-          },
+      final headers = {
+        if ((accessToken ?? '').isNotEmpty) 'Authorization': 'Bearer $accessToken',
+        'Accept': 'application/json',
+      };
+
+      final sources = <Future<Response<dynamic>>>[
+        dio.get(
+          'employee/list-employee',
+          queryParameters: {'site': siteId},
+          options: Options(headers: headers),
         ),
-      );
+        dio.get(
+          'employee/allInfo/$siteId',
+          options: Options(headers: headers),
+        ),
+      ];
 
-      if (response.statusCode != 200 || response.data is! List) {
-        return null;
-      }
+      final lookup = username.trim().toLowerCase();
 
-      for (final item in response.data as List) {
-        if (item is! Map<String, dynamic>) continue;
+      for (final future in sources) {
+        final response = await future;
+        _debug(
+          '[AuthRepository] Resolve employee response: status=${response.statusCode} '
+          'type=${response.data.runtimeType}',
+        );
 
-        final accountId =
-            item['accountID']?.toString().trim().toLowerCase() ??
-            item['AccountID']?.toString().trim().toLowerCase();
-        final userName =
-            item['userName']?.toString().trim().toLowerCase() ??
-            item['UserName']?.toString().trim().toLowerCase();
-        final code =
-            item['code']?.toString().trim().toLowerCase() ??
-            item['Code']?.toString().trim().toLowerCase();
-        final lookup = username.trim().toLowerCase();
+        if (response.statusCode != 200 || response.data is! List) {
+          continue;
+        }
 
-        if (accountId == lookup || userName == lookup || code == lookup) {
-          final idRaw = item['employeeId'] ?? item['id'] ?? item['ID'];
-          final employeeId = int.tryParse(idRaw?.toString() ?? '');
-          if (employeeId == null || employeeId <= 0) continue;
+        for (final item in response.data as List) {
+          if (item is! Map) continue;
+          final row = Map<String, dynamic>.from(item);
 
-          return _ResolvedEmployee(
-            employeeId: employeeId,
-            siteId:
-                item['siteID']?.toString() ??
-                item['siteId']?.toString() ??
-                siteId,
-            fullName:
-                item['fullName']?.toString() ??
-                item['FullName']?.toString(),
-            staffCode: item['code']?.toString() ?? item['Code']?.toString(),
-          );
+          final accountId =
+              row['accountID']?.toString().trim().toLowerCase() ??
+              row['AccountID']?.toString().trim().toLowerCase();
+          final userName =
+              row['userName']?.toString().trim().toLowerCase() ??
+              row['UserName']?.toString().trim().toLowerCase() ??
+              row['username']?.toString().trim().toLowerCase() ??
+              row['Username']?.toString().trim().toLowerCase();
+          final code =
+              row['code']?.toString().trim().toLowerCase() ??
+              row['Code']?.toString().trim().toLowerCase();
+
+          if (accountId == lookup || userName == lookup || code == lookup) {
+            final idRaw = row['employeeId'] ?? row['id'] ?? row['ID'];
+            final employeeId = int.tryParse(idRaw?.toString() ?? '');
+            if (employeeId == null || employeeId <= 0) continue;
+
+            _debug(
+              '[AuthRepository] Resolved identity: employeeId=$employeeId '
+              'accountId=$accountId userName=$userName code=$code',
+            );
+
+            return _ResolvedEmployee(
+              employeeId: employeeId,
+              siteId:
+                  row['siteID']?.toString() ??
+                  row['siteId']?.toString() ??
+                  siteId,
+              fullName:
+                  row['fullName']?.toString() ??
+                  row['FullName']?.toString(),
+              staffCode: row['code']?.toString() ?? row['Code']?.toString(),
+            );
+          }
         }
       }
     } catch (e) {
@@ -228,31 +239,6 @@ class AuthRepository {
 
     return null;
   }
-
-  _ResolvedEmployee? _localFallbackIdentity({
-    required String username,
-    required String siteId,
-  }) {
-    final key = '${siteId.trim().toUpperCase()}::${username.trim().toLowerCase()}';
-    switch (key) {
-      case 'KIA::admin':
-        return const _ResolvedEmployee(
-          employeeId: 8847,
-          siteId: 'KIA',
-          fullName: 'CAO VĂN ĐỒNG',
-          staffCode: '200190',
-        );
-      case 'KIA::baoduy':
-        return const _ResolvedEmployee(
-          employeeId: 11394,
-          siteId: 'KIA',
-          fullName: 'BẢO DUY MOBILE',
-          staffCode: 'BAODUYKIA',
-        );
-    }
-    return null;
-  }
-
   void _debug(String message) {
     if (!kDebugMode) return;
     debugPrint(message);

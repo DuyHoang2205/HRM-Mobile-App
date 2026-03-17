@@ -181,6 +181,11 @@
   },
   "active": "f11bc6431bdb8f4f",
   "lastOpenFiles": [
+    "overtime_feb_demo_and_inspect.sql",
+    "overtime_flow_backend_frontend.md",
+    "cleanup_wrong_db_artifacts.sql",
+    "kia_admin_attendance_setup.sql",
+    "kia_baoduy_attendance_setup.sql",
     "kia_leave_e2e_test_flow.md",
     "kia_backend_summary_verification.md",
     "frontend_clean_guide.md",

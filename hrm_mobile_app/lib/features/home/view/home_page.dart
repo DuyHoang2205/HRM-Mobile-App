@@ -10,6 +10,9 @@ import '../../checkin/view/checkin_page.dart';
 import '../../checkin/models/checkin_result.dart';
 import '../widgets/folder_section.dart';
 import '../../attendance/view/attendance_page.dart';
+import '../../attendance/bloc/attendance_bloc.dart';
+import '../../attendance/bloc/attendance_event.dart';
+import '../../attendance/view/attendance_explanation_list_page.dart';
 import '../../overtime/view/overtime_list_page.dart';
 import '../../leave/view/leave_list_page.dart';
 import '../../leave/view/business_trip_page.dart';
@@ -19,10 +22,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => HomeBloc()..add(const HomeStarted()),
-      child: const _HomeView(),
-    );
+    return const _HomeView();
   }
 }
 
@@ -102,6 +102,16 @@ class _HomeView extends StatelessWidget {
                                       );
                                     }
                                   }
+                                  break;
+                                case FolderAction.explanation:
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider(
+                                        create: (_) => AttendanceBloc()..add(const AttendanceStarted()),
+                                        child: const AttendanceExplanationListPage(),
+                                      ),
+                                    ),
+                                  );
                                   break;
                                 case FolderAction.overtime:
                                   Navigator.of(context).push(
