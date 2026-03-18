@@ -5,6 +5,7 @@ import '../../features/leave/view/leave_registration_page.dart';
 import '../../features/attendance/view/attendance_explanation_list_page.dart';
 import '../../features/attendance/bloc/attendance_bloc.dart';
 import '../../features/attendance/bloc/attendance_event.dart';
+import '../../features/chatbot/view/chatbot_page.dart';
 import '../../features/profile/view/profile_page.dart';
 import '../../features/profile/bloc/profile_bloc.dart';
 import '../../features/profile/bloc/profile_state.dart';
@@ -278,6 +279,15 @@ class _PlusMenuOverlay extends StatelessWidget {
                               create: (_) => AttendanceBloc()..add(const AttendanceStarted()),
                               child: const AttendanceExplanationListPage(),
                             ),
+                          ),
+                        ),
+                      ),
+                      _PlusMenuItem(
+                        icon: Icons.smart_toy_outlined,
+                        label: 'Trợ lý HR AI',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ChatbotPage(),
                           ),
                         ),
                       ),

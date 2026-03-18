@@ -52,17 +52,31 @@ class _AttendanceViewState extends State<_AttendanceView>
     with SingleTickerProviderStateMixin {
   late final TabController _tab;
   CheckInResult? _lastResult;
+  bool _timesheetLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this);
+    _tab.addListener(_handleTabChanged);
   }
 
   @override
   void dispose() {
+    _tab.removeListener(_handleTabChanged);
     _tab.dispose();
     super.dispose();
+  }
+
+  void _handleTabChanged() {
+    if (_tab.indexIsChanging || _tab.index != 1 || _timesheetLoaded) return;
+    _timesheetLoaded = true;
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    final monthEnd = DateTime(now.year, now.month + 1, 0);
+    context.read<AttendanceBloc>().add(
+      AttendanceTimesheetDateChanged(start: monthStart, end: monthEnd),
+    );
   }
 
   @override

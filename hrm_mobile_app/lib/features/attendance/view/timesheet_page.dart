@@ -200,8 +200,6 @@ class _MonthlyTimesheetTabState extends State<_MonthlyTimesheetTab> {
     super.initState();
     final now = DateTime.now();
     _currentMonth = DateTime(now.year, now.month, 1);
-    // Request initial data
-    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchMonth());
   }
 
   void _fetchMonth() {

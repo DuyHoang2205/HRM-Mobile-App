@@ -161,6 +161,17 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     AttendanceTimesheetDateChanged event,
     Emitter<AttendanceState> emit,
   ) async {
+    if (_isSameRange(event.start, event.end)) {
+      final cachedRange = _rangeCache[_buildRangeKey(
+        employeeId: await AuthHelper.getEmployeeId(),
+        siteID: await AuthHelper.getSiteId(),
+        start: event.start,
+        end: event.end,
+      )];
+      if (cachedRange != null || state.isLoading) {
+        return;
+      }
+    }
     emit(
       state.copyWith(
         filterDate: event.start,
@@ -175,6 +186,9 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     AttendanceFilterChanged event,
     Emitter<AttendanceState> emit,
   ) async {
+    if (_isSameRange(event.start, event.end) && !state.isLoading) {
+      return;
+    }
     emit(
       state.copyWith(
         filterDate: event.start,
@@ -206,8 +220,12 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       String fmt(DateTime d) =>
           "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
 
-      final rangeKey =
-          '${employeeId ?? 0}|$siteID|${fmt(start)}|${fmt(queryEnd)}';
+      final rangeKey = _buildRangeKey(
+        employeeId: employeeId,
+        siteID: siteID,
+        start: start,
+        end: queryEnd,
+      );
 
       if (!force) {
         final cached = _rangeCache[rangeKey];
@@ -783,6 +801,18 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
 
   String _fmtDate(DateTime value) =>
       "${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}";
+
+  bool _isSameRange(DateTime start, DateTime end) =>
+      _fmtDate(state.filterDate) == _fmtDate(start) &&
+      _fmtDate(state.endDate ?? state.filterDate) == _fmtDate(end);
+
+  String _buildRangeKey({
+    required int? employeeId,
+    required String siteID,
+    required DateTime start,
+    required DateTime end,
+  }) =>
+      '${employeeId ?? 0}|$siteID|${_fmtDate(start)}|${_fmtDate(end)}';
 
   String _fmtHHmmss(DateTime value) =>
       "${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}:${value.second.toString().padLeft(2, '0')}";

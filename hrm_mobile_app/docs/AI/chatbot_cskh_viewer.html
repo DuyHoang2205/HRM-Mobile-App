@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot CSKH - Architecture & Sequence Diagram</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            background: #f5f5f5;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab-button:hover {
+            background: #efefef;
+            color: #667eea;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+            min-height: 600px;
+            max-height: 1200px;
+            overflow: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            background: #fafafa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .info-box strong {
+            color: #667eea;
+        }
+
+        .timing-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .timing-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .timing-table td {
+            border-bottom: 1px solid #e0e0e0;
+            padding: 12px;
+        }
+
+        .timing-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+        }
+
+        .download-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin: 10px 10px 10px 0;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .download-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .edge-case-list {
+            background: #fff5e6;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .edge-case-list h4 {
+            color: #ff9800;
+            margin-bottom: 10px;
+        }
+
+        .edge-case-list ul {
+            margin-left: 20px;
+        }
+
+        .edge-case-list li {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .footer {
+            background: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #e0e0e0;
+            font-size: 13px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+
+            .tab-button {
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
+
+        .mermaid-scroll {
+            overflow-x: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🤖 Chatbot CSKH - Microservices Architecture</h1>
+            <p>Flutter → NestJS → n8n → Dify | Complete Flow with Edge Cases & Error Handling</p>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab(0)">📊 Architecture Overview</button>
+            <button class="tab-button" onclick="switchTab(1)">🔄 Sequence Diagram</button>
+            <button class="tab-button" onclick="switchTab(2)">⏱️ Timing Analysis</button>
+            <button class="tab-button" onclick="switchTab(3)">⚠️ Edge Cases</button>
+        </div>
+
+        <!-- TAB 1: ARCHITECTURE -->
+        <div class="tab-content active">
+            <h2>System Architecture Diagram</h2>
+            <p style="margin: 15px 0; color: #666;">Complete microservices flow showing all layers, integrations, and error handling paths.</p>
+            
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="chatbot_architecture_diagram.svg" class="download-button" download>📥 Download SVG (High Resolution)</a>
+                <a href="chatbot_sequence_diagram.mmd" class="download-button" download>📥 Download Mermaid Diagram</a>
+            </div>
+
+            <img src="chatbot_architecture_diagram.svg" style="width: 100%; max-width: 1400px; margin: 20px auto; display: block; border: 1px solid #e0e0e0; border-radius: 8px;">
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4A9FE6;"></div>
+                    <span><strong>Flutter</strong> - Mobile frontend</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #E33935;"></div>
+                    <span><strong>NestJS</strong> - API Gateway</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #FF6B35;"></div>
+                    <span><strong>n8n</strong> - Orchestrator</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #6366F1;"></div>
+                    <span><strong>Dify</strong> - AI + RAG</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #336791;"></div>
+                    <span><strong>PostgreSQL</strong> - Database</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #059669;"></div>
+                    <span><strong>Success</strong> - Happy path</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #F97316;"></div>
+                    <span><strong>Warning</strong> - Edge case</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #DC2626;"></div>
+                    <span><strong>Error</strong> - Failure/Timeout</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>📌 Key Components:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>Flutter:</strong> Offline sync (SQLite), JWT auth, message state tracking</li>
+                    <li><strong>NestJS:</strong> Rate limiting, JWT validation, webhook format, message persistence</li>
+                    <li><strong>n8n:</strong> Context management, token truncation, intent classification, escalation</li>
+                    <li><strong>Dify:</strong> LLM inference, RAG queries, confidence scoring, refusal handling</li>
+                    <li><strong>PostgreSQL:</strong> Message history, conversation context, order/inventory data</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- TAB 2: SEQUENCE DIAGRAM -->
+        <div class="tab-content">
+            <h2>Request Flow - Sequence Diagram</h2>
+            <p style="margin: 15px 0; color: #666;">Step-by-step timing of a message from Flutter to Dify and back, including all error paths and escalations.</p>
+            
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="chatbot_sequence_diagram.mmd" class="download-button" download>📥 Download Mermaid Diagram</a>
+            </div>
+
+            <div class="mermaid" style="max-height: 1000px; overflow-y: auto;">
+sequenceDiagram
+    actor User as 👤 User
+    participant Flutter as 📱 Flutter
+    participant NestJS as 🟥 NestJS
+    participant n8n as 🟠 n8n
+    participant Dify as 🟣 Dify
+    participant DB as 🐘 PostgreSQL
+
+    User->>Flutter: 1. Send message
+    Flutter->>Flutter: 2. Validate + Check network ⏱️ ~70ms
+    Flask->>NestJS: 3. HTTP POST /chat (JWT auth) ⏱️ ~150ms
+    
+    NestJS->>NestJS: 4. Validate JWT + Rate limit ⏱️ ~8ms
+    NestJS->>DB: 5. Save message ⏱️ ~18ms
+    NestJS->>n8n: 6. POST /webhook (payload) ⏱️ ~75ms
+    
+    n8n->>n8n: 7. Parse + Load context ⏱️ ~40ms
+    n8n->>n8n: 8. Token check (truncate if needed) ⏱️ ~15ms
+    n8n->>Dify: 9. POST /api/chat (message + context) ⏱️ ~2-3s
+    
+    Dify->>Dify: 10. Tokenize + Query RAG + LLM inference ⏱️ ~1-2s
+    Dify-->>n8n: 11. Return response + confidence score
+    
+    n8n->>DB: 12. Query order (if needed) ⏱️ ~25ms
+    n8n->>NestJS: 13. POST /chat/response (answer) ⏱️ ~75ms
+    
+    NestJS->>DB: 14. Save response ⏱️ ~18ms
+    NestJS->>Flutter: 15. Send response (WebSocket/HTTP) ⏱️ ~150ms
+    
+    Flutter->>Flutter: 16. Update state: delivered ⏱️ ~10ms
+    Flutter-->>User: 17. Display message in chat
+    
+    Note over User,Dify: ⏱️ TOTAL: ~2-4 seconds (p95: 2s, p99: 4s)
+            </div>
+        </div>
+
+        <!-- TAB 3: TIMING ANALYSIS -->
+        <div class="tab-content">
+            <h2>Latency Breakdown & Timing Analysis</h2>
+            <p style="margin: 15px 0; color: #666;">Per-layer latency for happy path and various edge cases.</p>
+
+            <h3 style="margin-top: 30px;">Happy Path: Product Inquiry (Best Case)</h3>
+            <table class="timing-table">
+                <thead>
+                    <tr>
+                        <th>Stage</th>
+                        <th>Component</th>
+                        <th>Operation</th>
+                        <th>Latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Flutter</td>
+                        <td>Validate + network check</td>
+                        <td>~70ms</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>Flutter → NestJS</td>
+                        <td>HTTP roundtrip (network latency)</td>
+                        <td>~150ms</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>NestJS</td>
+                        <td>JWT validation + Rate limit</td>
+                        <td>~8ms</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>NestJS → PostgreSQL</td>
+                        <td>Save incoming message</td>
+                        <td>~18ms</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>NestJS → n8n</td>
+                        <td>Webhook HTTP call</td>
+                        <td>~75ms</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td>n8n</td>
+                        <td>Parse + load context + token check</td>
+                        <td>~55ms</td>
+                    </tr>
+                    <tr style="background: #e8f5e9;">
+                        <td>7</td>
+                        <td>n8n → Dify</td>
+                        <td>Call LLM + RAG (AI processing)</td>
+                        <td style="font-weight: 600;"><strong>~1500-3000ms ⭐</strong></td>
+                    </tr>
+                    <tr>
+                        <td>8</td>
+                        <td>n8n</td>
+                        <td>Parse Dify response</td>
+                        <td>~10ms</td>
+                    </tr>
+                    <tr>
+                        <td>9</td>
+                        <td>n8n → NestJS</td>
+                        <td>Send answer back</td>
+                        <td>~75ms</td>
+                    </tr>
+                    <tr>
+                        <td>10</td>
+                        <td>NestJS → PostgreSQL</td>
+                        <td>Save response</td>
+                        <td>~18ms</td>
+                    </tr>
+                    <tr>
+                        <td>11</td>
+                        <td>NestJS → Flutter</td>
+                        <td>HTTP response + network</td>
+                        <td>~150ms</td>
+                    </tr>
+                    <tr>
+                        <td>12</td>
+                        <td>Flutter</td>
+                        <td>Update UI + local cache</td>
+                        <td>~15ms</td>
+                    </tr>
+                    <tr style="background: #fff3cd; font-weight: 600;">
+                        <td colspan="3"><strong>TOTAL E2E (p50)</strong></td>
+                        <td><strong>~2.0-2.5 seconds</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 30px;">Edge Case Timings</h3>
+            <table class="timing-table">
+                <thead>
+                    <tr>
+                        <th>Edge Case</th>
+                        <th>Additional Latency</th>
+                        <th>Total E2E</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #fce4ec;">
+                        <td>⚠️ Token Truncation (> 4K)</td>
+                        <td>+20ms</td>
+                        <td>~2.0-2.5s</td>
+                        <td>Happens in n8n before Dify call</td>
+                    </tr>
+                    <tr style="background: #fce4ec;">
+                        <td>⚠️ Context Switch Detected</td>
+                        <td>~100ms</td>
+                        <td>~2.1-2.6s</td>
+                        <td>Reset flow + ask clarification</td>
+                    </tr>
+                    <tr style="background: #fce4ec;">
+                        <td>⚠️ Data Contradiction</td>
+                        <td>+50ms</td>
+                        <td>~2.0-2.6s</td>
+                        <td>Dify asks for confirmation</td>
+                    </tr>
+                    <tr style="background: #fce4ec;">
+                        <td>⚠️ Low Confidence (< 60%)</td>
+                        <td>+200ms</td>
+                        <td>~2.2-2.8s</td>
+                        <td>Additional Dify check + escalate</td>
+                    </tr>
+                    <tr style="background: #ffebee;">
+                        <td>❌ API Timeout (5s limit)</td>
+                        <td>+5000ms</td>
+                        <td>~5.0+ seconds</td>
+                        <td>Fallback response sent immediately</td>
+                    </tr>
+                    <tr style="background: #ffebee;">
+                        <td>❌ Rate Limit Hit (429)</td>
+                        <td>+3ms</td>
+                        <td>~100ms</td>
+                        <td>Rejected at NestJS gateway</td>
+                    </tr>
+                    <tr style="background: #e3f2fd;">
+                        <td>🔄 Offline Mode (SQLite queue)</td>
+                        <td>Queued</td>
+                        <td>On reconnect</td>
+                        <td>Retry mechanism: exp backoff</td>
+                    </tr>
+                    <tr style="background: #e3f2fd;">
+                        <td>✓ Happy Path 2: Check Order</td>
+                        <td>+20ms (DB query)</td>
+                        <td>~2.0-2.6s</td>
+                        <td>Extra PostgreSQL query</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box">
+                <strong>📌 SLA Targets:</strong>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li><strong>p50 (median):</strong> &lt; 2.0 seconds</li>
+                    <li><strong>p95:</strong> &lt; 2.5 seconds</li>
+                    <li><strong>p99:</strong> &lt; 4.0 seconds</li>
+                    <li><strong>Error rate:</strong> &lt; 1%</li>
+                    <li><strong>Availability:</strong> 99.5%</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- TAB 4: EDGE CASES -->
+        <div class="tab-content">
+            <h2>Edge Cases & Error Handling</h2>
+            <p style="margin: 15px 0; color: #666;">Comprehensive handling for all failure scenarios and boundary conditions.</p>
+
+            <div class="edge-case-list">
+                <h4>🔵 Flutter Frontend Edge Cases</h4>
+                <ul>
+                    <li><strong>Invalid File Type:</strong> Block Voice/Video/Exe files at client → Show error toast → No API call made</li>
+                    <li><strong>Offline Mode:</strong> Save to SQLite (Hive) → Queue message for retry → Auto-sync when online → Exponential backoff (1s → 2s → 4s → 8s)</li>
+                    <li><strong>Message State Tracking:</strong> pending → sent → delivered → read (UI updates)</li>
+                    <li><strong>Push Notification Handling:</strong> Receive response notification → Open chat screen → Mark as read</li>
+                    <li><strong>Large File Upload:</strong> Show progress bar → Resume on network interruption</li>
+                </ul>
+            </div>
+
+            <div class="edge-case-list">
+                <h4>🔴 NestJS Gateway Edge Cases</h4>
+                <ul>
+                    <li><strong>JWT Expired:</strong> Validate JWT → If expired, request refresh token → Retry with new token → If both fail: 401 Unauthorized</li>
+                    <li><strong>Rate Limiting:</strong> 100 requests/minute per user → On exceeded: return 429 Too Many Requests → Client-side retry with exponential backoff</li>
+                    <li><strong>Deduplication:</strong> If same message_id arrives twice (webhook retry) → Idempotent: don't create duplicate in DB</li>
+                    <li><strong>Database Connection Failure:</strong> Fail fast, return 503 Service Unavailable → Alert ops team</li>
+                    <li><strong>Webhook Timeout to n8n:</strong> Retry up to 3 times → If still fails: queue in dead-letter queue (DLQ) → Manual replay later</li>
+                </ul>
+            </div>
+
+            <div class="edge-case-list">
+                <h4>🟠 n8n Orchestrator Edge Cases</h4>
+                <ul>
+                    <li><strong>Context Window Overflow:</strong> Count tokens of conversation history → If > 4K: truncate old messages → Keep system prompt + last 5-10 messages</li>
+                    <li><strong>Missing Conversation Context:</strong> Session ID not found in DB → Create new conversation context → Initialize with user profile data</li>
+                    <li><strong>Intent Classification Ambiguity:</strong> If multiple intents detected → Ask clarification: "You want to check order or ask about size?"</li>
+                    <li><strong>Dify API Timeout:</strong> Set timeout to 5 seconds → If exceeded: cancel request → Send fallback message: "Sorry, please wait..." → Escalate to human</li>
+                    <li><strong>Webhook Validation Failure:</strong> Verify signature + payload format → If invalid: log security event + reject (400 Bad Request)</li>
+                </ul>
+            </div>
+
+            <div class="edge-case-list">
+                <h4>🟣 Dify (AI) Edge Cases</h4>
+                <ul>
+                    <li><strong>Contradictory User Data:</strong> Input: "Height 1m8, Weight 40kg" (unrealistic) → Detected via validation rules → Ask: "Please confirm your weight?"</li>
+                    <li><strong>Context Switching:</strong> User was asking about áo (shirt) → Suddenly switches to "Tôi muốn đổi quần cũ" (return old pants) → Detect intent change → Exit previous flow → Process new intent</li>
+                    <li><strong>Refusal Cases:</strong> Out-of-scope questions (gold prices, politics, etc.) → Dify configured to politely refuse: "I can only help with clothing items"</li>
+                    <li><strong>Low Confidence Score:</strong> If confidence &lt; 60% → Suggest escalation: "I'm not sure, let me connect you with an agent" → Trigger human handoff</li>
+                    <li><strong>Hallucination Prevention:</strong> If Dify generates info not in RAG KB → Confidence score auto-drops → Triggers refusal or escalation</li>
+                    <li><strong>Language Mix:</strong> User sends Viet + English mix → Dify configured to handle → Respond in same language as user's primary</li>
+                </ul>
+            </div>
+
+            <div class="edge-case-list">
+                <h4>🐘 PostgreSQL & Integration Edge Cases</h4>
+                <ul>
+                    <li><strong>Out of Stock (Inventory Check):</strong> n8n queries: "SELECT * FROM products WHERE product_id = ?" → If stock = 0 → Call Dify again: "Suggest alternative colors/sizes" → User sees recommendations</li>
+                    <li><strong>Order Not Found:</strong> User asks for order #12345 → DB query returns 0 rows → Dify: "I couldn't find that order. Can you provide more details?"</li>
+                    <li><strong>Concurrent Updates:</strong> While user is chatting, inventory updates in parallel → Use versioning or pessimistic locking → Ensure consistency</li>
+                    <li><strong>Database Slow Query:</strong> Complex JOIN takes > 2s → Query timeout occurs → Fallback: "Data loading slow, please try again" → Escalate</li>
+                </ul>
+            </div>
+
+            <div class="edge-case-list">
+                <h4>👤 Human Handoff Edge Cases</h4>
+                <ul>
+                    <li><strong>No Agents Available:</strong> All agents busy → Queue customer → Estimated wait time: "5 agents ahead of you" → Customer can leave message</li>
+                    <li><strong>Agent Disconnect:</strong> Agent session drops mid-conversation → Detect disconnect → Automatically queue customer again → New agent takes over</li>
+                    <li><strong>Escalation Loop Prevention:</strong> If escalated message fails to reach Slack (Slack API down) → Retry up to 3x → Send backup email to support team</li>
+                    <li><strong>Conversation History Transfer:</strong> Entire chat history (AI + user) sent to agent → Agent can see what AI already tried → No duplicate questions</li>
+                </ul>
+            </div>
+
+            <div class="info-box">
+                <strong>🎯 Overall Strategy:</strong>
+                <p style="margin-top: 10px;">Fail gracefully → Provide fallback response → Escalate to human → Log everything for analysis. Never return blank/error to user.</p>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>🔐 <strong>Security:</strong> JWT auth (15-min refresh), PII masking in logs, encryption at rest (pgcrypto), HTTPS only</p>
+            <p>📊 <strong>Monitoring:</strong> ELK Stack (structured logs), Datadog (metrics), distributed tracing with trace_id</p>
+            <p>🔄 <strong>Deployment:</strong> Canary deploy, auto-rollback on error spike, read replicas for PostgreSQL</p>
+            <p style="margin-top: 15px; color: #999;">Generated: 2025 | Architecture: Microservices + AI Automation</p>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-button');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            tabs[index].classList.add('active');
+            buttons[index].classList.add('active');
+        }
+
+        // Initialize Mermaid
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        mermaid.contentLoaded();
+    </script>
+</body>
+</html>
